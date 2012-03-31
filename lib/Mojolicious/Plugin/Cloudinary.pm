@@ -85,7 +85,20 @@ __PACKAGE__->attr(api_secret => sub { die 'api_secret is required in constructor
 __PACKAGE__->attr(api_url => sub { 'http://api.cloudinary.com/v1_1' });
 __PACKAGE__->attr(private_cdn => sub { die 'private_cdn is required in constructor' });
 __PACKAGE__->attr(public_cdn => sub { 'http://res.cloudinary.com' });
-__PACKAGE__->attr(_ua => sub { Mojo::UserAgent->new });
+__PACKAGE__->attr(_ua => sub {
+    my $ua = Mojo::UserAgent->new;
+
+    $ua->on(start => sub {
+        my($ua, $tx) = @_;
+
+        for my $part (@{ $tx->req->content->parts }) {
+            my $content_type = $part->headers->content_type || '';
+            $part->headers->remove('Content-Type') if $content_type eq 'text/plain';
+        }
+    });
+
+    return $ua;
+});
 
 =head1 METHODS
 
