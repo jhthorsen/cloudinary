@@ -1,18 +1,20 @@
 use warnings;
 use strict;
 use lib qw(lib);
+use Data::Dumper;
 use Test::More;
 use Mojo::Asset::File;
+use Mojo::IOLoop;
 use Mojolicious::Plugin::Cloudinary;
 
-plan tests => 23;
+plan tests => 24;
 
 {
     # test data from
     # https://cloudinary.com/documentation/upload_images#request_authentication
     my $cloudinary = Mojolicious::Plugin::Cloudinary->new({
-                         api_secret => 'abcd',
                          api_key => '1234567890',
+                         api_secret => 'abcd',
                          cloud_name => 'demo',
                      });
 
@@ -86,4 +88,35 @@ plan tests => 23;
         'http://res.cloudinary.com/demo/image/upload/h_140,w_100/sample.jpg',
         'url for sample - with transformation'
     );
+}
+
+SKIP: {
+    skip 'API_KEY is not set', 1 unless $ENV{'API_KEY'};
+    skip 'API_SECRET is not set', 1 unless $ENV{'API_SECRET'};
+    skip 'CLOUD_NAME is not set', 1 unless $ENV{'CLOUD_NAME'};
+
+    # Set MOJO_USERAGENT_DEBUG=1 if you want to see the actual
+    # data sent between you and cloudinary.com
+
+    my $cloudinary = Mojolicious::Plugin::Cloudinary->new({
+                         api_key => $ENV{'API_KEY'},
+                         api_secret => $ENV{'API_SECRET'},
+                         cloud_name => $ENV{'CLOUD_NAME'},
+                     });
+
+    $cloudinary->upload({
+        file => { file => 't/test.jpg' },
+        on_success => sub {
+            my($res) = @_;
+            ok(1, 't/test.jpg was uploaded');
+            Mojo::IOLoop->stop;
+        },
+        on_error => sub {
+            my($res, $tx) = @_;
+            ok(0, 't/test.jpg could not be uploaded');
+            Mojo::IOLoop->stop;
+        },
+    });
+
+    Mojo::IOLoop->start;
 }
