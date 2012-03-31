@@ -1,4 +1,5 @@
 Revision history for Mojolicious-Plugin-Cloudinary
 
 0.01
-       * Started project
+       * Can upload images
+       * Generage url from public_id

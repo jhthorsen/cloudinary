@@ -4,11 +4,19 @@ package Mojolicious::Plugin::Cloudinary;
 
 Mojolicious::Plugin::Cloudinary - Talk with cloudinary.com
 
+=head1 VERSION
+
+0.00
+
 =head1 DESCRIPTION
 
-This module lets you interface to cloudinary.com.
+This module lets you interface to L<http://cloudinary.com>. Its primary
+target is to be a L<Mojolicious> plugin, but it can also be used as a
+generic module - just skip calling L</register>.
 
 =head1 SYNOPSIS
+
+=head2 With mojolicious
 
     package MyWebApp;
     use Mojo::Base 'Mojolicious';
@@ -41,6 +49,33 @@ This module lets you interface to cloudinary.com.
         });
     }
 
+=head2 Standalone
+
+    my $delay = Mojo::IOLoop->delay;
+    my $cloudinary = Mojolicious::Plugin::Cloudinary->new(
+                         cloud_name => '...',
+                         api_key => '...',
+                         api_secret => '...',
+                     );
+
+    $delay->begin;
+    $cloudinary->upload({
+        file => { file => $path_to_file },
+        on_success => sub {
+            # ...
+            $delay->end;
+        },
+        on_error => sub {
+            # ...
+            $delay->end;
+        },
+    });
+
+    # let's you do multiple upload() in parallel
+    # just call $delay->begin once pr upload()
+    # and $delay->end in each on_xxx callback
+    $delay->wait;
+
 =cut
 
 use Mojo::Base 'Mojolicious::Plugin';
@@ -49,6 +84,7 @@ use Mojo::UserAgent;
 use Mojo::Util qw/ sha1_sum url_escape /;
 use Scalar::Util 'weaken';
 
+our $VERSION = '0.01';
 my @SIGNATURE_KEYS = qw/ callback eager format public_id tags timestamp transformation /;
 
 =head1 ATTRIBUTES

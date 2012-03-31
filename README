@@ -2,9 +2,12 @@ NAME
     Mojolicious::Plugin::Cloudinary - Talk with cloudinary.com
 
 DESCRIPTION
-    This module lets you interface to cloudinary.com.
+    This module lets you interface to <http://cloudinary.com>. Its primary
+    target is to be a Mojolicious plugin, but it can also be used as a
+    generic module - just skip calling "register".
 
 SYNOPSIS
+  With mojolicious
         package MyWebApp;
         use Mojo::Base 'Mojolicious';
 
@@ -35,6 +38,32 @@ SYNOPSIS
                 },
             });
         }
+
+  Standalone
+        my $delay = Mojo::IOLoop->delay;
+        my $cloudinary = Mojolicious::Plugin::Cloudinary->new(
+                             cloud_name => '...',
+                             api_key => '...',
+                             api_secret => '...',
+                         );
+
+        $delay->begin;
+        $cloudinary->upload({
+            file => { file => $path_to_file },
+            on_success => sub {
+                # ...
+                $delay->end;
+            },
+            on_error => sub {
+                # ...
+                $delay->end;
+            },
+        });
+
+        # let's you do multiple upload() in parallel
+        # just call $delay->begin once pr upload()
+        # and $delay->end in each on_xxx callback
+        $delay->wait;
 
 ATTRIBUTES
   cloud_name
@@ -74,7 +103,7 @@ METHODS
         });
 
     Will upload a file to <http://cloudinary.com> using the parameters given
-    "cloud_name" and "api_key". The "file" can be:
+    "cloud_name" "api_key" and "api_secret". The "file" can be:
 
     *   A hash
 
