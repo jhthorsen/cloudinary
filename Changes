@@ -1,5 +1,5 @@
 Revision history for Mojolicious-Plugin-Cloudinary
 
-0.01
+0.01     Sat Mar 31 20:49:21 2012
        * Can upload images
        * Generage url from public_id

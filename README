@@ -1,6 +1,9 @@
 NAME
     Mojolicious::Plugin::Cloudinary - Talk with cloudinary.com
 
+VERSION
+    0.01
+
 DESCRIPTION
     This module lets you interface to <http://cloudinary.com>. Its primary
     target is to be a Mojolicious plugin, but it can also be used as a
