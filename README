@@ -1,0 +1,127 @@
+NAME
+    Mojolicious::Plugin::Cloudinary - Talk with cloudinary.com
+
+DESCRIPTION
+    This module lets you interface to cloudinary.com.
+
+SYNOPSIS
+        package MyWebApp;
+        use Mojo::Base 'Mojolicious';
+
+        sub startup {
+            my $self = shift;
+            $self->plugin('Mojolicious::Plugin::Cloudinary', {
+                cloud_name => $str,
+                api_key => $str,
+                api_secret => $str,
+            });
+        }
+
+        package MyWebApp::SomeController;
+
+        sub upload {
+            my $self = shift;
+
+            $self->render_later;
+            $self->cloudinary_upload({
+                file => $self->param('upload_param'),
+                on_success => sub {
+                    my $res = shift;
+                    $self->render_json($res);
+                },
+                on_error => sub {
+                    my $res = shift || { error => 'Unknown' };
+                    $self->render_json($res);
+                },
+            });
+        }
+
+ATTRIBUTES
+  cloud_name
+    Your cloud name from <https://cloudinary.com/console>
+
+  api_key
+    Your API key from <https://cloudinary.com/console>
+
+  api_secret
+    Your API secret from <https://cloudinary.com/console>
+
+  api_url
+    Default is <http://api.cloudinary.com/v1_1>.
+
+  private_cdn
+    Your private CDN url from <http://api.cloudinary.com/v1_1>.
+
+  public_cdn
+    Default is <http://res.cloudinary.com>.
+
+METHODS
+  upload
+        $self->upload({
+            file => $binary_str|$url, # required
+            timestamp => $epoch, # time()
+            public_id => $str, # optional
+            format => $str, # optional
+            tags => ['foo', 'bar'], # optional
+            on_success => sub {
+                my($res) = @_;
+                # ...
+            },
+            on_error => sub {
+                my($res, $tx) = @_;
+                # ...
+            },
+        });
+
+    Will upload a file to <http://cloudinary.com> using the parameters given
+    "cloud_name" and "api_key". The "file" can be:
+
+    *   A hash
+
+            { file => 'path/to/image' }
+
+    *   A Mojo::Upload object.
+
+    *   A Mojo::Asset object.
+
+    *   A URL
+
+    "res" in callbacks will be the JSON response from
+    <http://cloudinary.com> as a hash ref. It may also be "undef" if
+    something went wrong with the actual HTTP POST.
+
+    See also <https://cloudinary.com/documentation/upload_images>.
+
+  url_for
+        $url_obj = $self->url_for("$public_id.$format", \%args);
+
+    This method will return a public URL to the image at
+    <http://cloudinary.com>. It will use "private_cdn" or "public_cdn" and
+    "cloud_name" to construct the URL. The return value is a Mojo::URL
+    object.
+
+    Example %args:
+
+        {
+            w => 100, # width of image
+            h => 150, # height of image
+            secure => $bool, # use private_cdn or public_cdn
+        }
+
+  register
+    Adds the helpers to your controller:
+
+    *   cloudinary_upload
+
+        See "upload".
+
+    *   cloudinary_url_for
+
+        See "url_for".
+
+COPYRIGHT & LICENSE
+    See Oppstarter
+
+AUTHOR
+    Jan Henning Thorsen - jan.henning@oppstarter.no
+
