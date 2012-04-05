@@ -2,6 +2,9 @@ Revision history for Mojolicious-Plugin-Cloudinary
 
 0.02
        * Add destroy(), which deletes remote resources
+       * Fix adding "type" parameter when calculating "signature"
+       * Change api_url() and public_cdn() to private attributes, after
+         receiving feedback from cloudinary.
 
 0.01     Sat Mar 31 20:49:21 2012
        * Can upload images
