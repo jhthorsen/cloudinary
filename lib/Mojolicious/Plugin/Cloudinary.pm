@@ -85,7 +85,7 @@ use Mojo::Util qw/ sha1_sum url_escape /;
 use Scalar::Util 'weaken';
 
 our $VERSION = eval '0.01';
-my @SIGNATURE_KEYS = qw/ callback eager format public_id tags timestamp transformation /;
+my @SIGNATURE_KEYS = qw/ callback eager format public_id tags timestamp transformation type /;
 
 =head1 ATTRIBUTES
 
@@ -107,7 +107,7 @@ Default is L<http://api.cloudinary.com/v1_1>.
 
 =head2 private_cdn
 
-Your private CDN url from L<http://api.cloudinary.com/v1_1>.
+Your private CDN url from L<https://cloudinary.com/console>.
 
 =head2 public_cdn
 
@@ -190,7 +190,7 @@ sub upload {
 
     for my $name (qw/ file on_success /) {
         defined $args->{$name}
-            or die "Usage: \$self->upload_to_cloudinary({ $name => ... })";
+            or die "Usage: \$self->upload({ $name => ... })";
     }
 
     if(ref $args->{'tags'} eq 'ARRAY') {
@@ -209,27 +209,58 @@ sub upload {
         };
     }
 
-    $self->_call_api(upload => $args);
+    $self->_call_api(upload => $args, {
+        timestamp => time,
+        (map { ($_, $args->{$_}) } grep { defined $args->{$_} } @SIGNATURE_KEYS),
+        file => $args->{'file'},
+    });
+}
+
+=head2 destroy
+
+    $self->destroy({
+        public_id => $public_id,
+        on_success => sub {
+            my($res) = @_;
+            # ...
+        },
+        on_error => sub {
+            my($res, $tx) = @_;
+            # ...
+        },
+    });
+
+Will delete an image from cloudinary, identified by C<$public_id>.
+
+=cut
+
+sub destroy {
+    my($self, $args) = @_;
+
+    for my $name (qw/ public_id on_success /) {
+        defined $args->{$name}
+            or die "Usage: \$self->destroy({ $name => ... })";
+    }
+
+    $args->{'resource_type'} ||= 'image';
+
+    $self->_call_api(destroy => $args, {
+        public_id => $args->{'public_id'},
+        timestamp => $args->{'timestamp'} || time,
+        type => $args->{'type'} || 'upload',
+    });
 }
 
 sub _call_api {
-    my($self, $action, $args) = @_;
+    my($self, $action, $args, $post) = @_;
     my $url = join '/', $self->api_url, $self->cloud_name, $args->{'resource_type'}, $action;
     my $on_error = $args->{'on_error'} || sub {};
     my $on_success = $args->{'on_success'};
     my $headers = { 'Content-Type' => 'multipart/form-data' };
-    my $post = {};
-
-    for my $k (@SIGNATURE_KEYS, 'file') {
-        $post->{$k} = $args->{$k} if defined $args->{$k};
-    }
 
     $post->{'api_key'} = $self->api_key;
     $post->{'signature'} = $self->_api_sign_request($post);
 
-    $self->_ua->on(error => sub {
-        warn @_;
-    });
     $self->_ua->post_form($url, $post, $headers, sub {
         my($ua, $tx) = @_;
 
@@ -283,7 +314,7 @@ sub url_for {
     $url->path(join '/', grep { length }
         $self->cloud_name,
         $args->{'resource_type'} || 'image',
-        'upload',
+        $args->{'type'} || 'upload',
         join(',', map { $_ .'_' .$args->{$_} } sort keys %$args),
         "$public_id.$format",
     );
@@ -298,6 +329,8 @@ Adds the helpers to your controller:
 =over 4
 
 =item * cloudinary_upload
+
+=item * cloudinary_destroy
 
 See L</upload>.
 
@@ -319,6 +352,10 @@ sub register {
     $app->helper(cloudinary_upload => sub {
         my $c = shift;
         $self->upload(@_);
+    });
+    $app->helper(cloudinary_destroy => sub {
+        my $c = shift;
+        $self->destroy(@_);
     });
     $app->helper(cloudinary_url_for => sub {
         my($c, $public_id, $args) = @_;
