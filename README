@@ -2,7 +2,7 @@ NAME
     Mojolicious::Plugin::Cloudinary - Talk with cloudinary.com
 
 VERSION
-    0.01
+    0.02
 
 DESCRIPTION
     This module lets you interface to <http://cloudinary.com>. Its primary
@@ -78,14 +78,8 @@ ATTRIBUTES
   api_secret
     Your API secret from <https://cloudinary.com/console>
 
-  api_url
-    Default is <http://api.cloudinary.com/v1_1>.
-
   private_cdn
-    Your private CDN url from <http://api.cloudinary.com/v1_1>.
-
-  public_cdn
-    Default is <http://res.cloudinary.com>.
+    Your private CDN url from <https://cloudinary.com/console>.
 
 METHODS
   upload
@@ -124,11 +118,26 @@ METHODS
 
     See also <https://cloudinary.com/documentation/upload_images>.
 
+  destroy
+        $self->destroy({
+            public_id => $public_id,
+            on_success => sub {
+                my($res) = @_;
+                # ...
+            },
+            on_error => sub {
+                my($res, $tx) = @_;
+                # ...
+            },
+        });
+
+    Will delete an image from cloudinary, identified by $public_id.
+
   url_for
         $url_obj = $self->url_for("$public_id.$format", \%args);
 
     This method will return a public URL to the image at
-    <http://cloudinary.com>. It will use "private_cdn" or "public_cdn" and
+    <http://cloudinary.com>. It will use "private_cdn" or the public CDN and
     "cloud_name" to construct the URL. The return value is a Mojo::URL
     object.
 
@@ -137,13 +146,15 @@ METHODS
         {
             w => 100, # width of image
             h => 150, # height of image
-            secure => $bool, # use private_cdn or public_cdn
+            secure => $bool, # use private_cdn or public cdn
         }
 
   register
     Adds the helpers to your controller:
 
     *   cloudinary_upload
+
+    *   cloudinary_destroy
 
         See "upload".
 
