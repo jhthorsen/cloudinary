@@ -3,6 +3,7 @@ Revision history for Mojolicious-Plugin-Cloudinary
 0.02
        * Add destroy(), which deletes remote resources
        * Fix adding "type" parameter when calculating "signature"
+       * Fix Use of uninitialized value in string eq at Cloudinary.pm line 355.
        * Change api_url() and public_cdn() to private attributes, after
          receiving feedback from cloudinary.
 

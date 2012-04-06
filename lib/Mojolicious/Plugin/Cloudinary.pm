@@ -351,9 +351,10 @@ sub register {
     });
     $app->helper(cloudinary_url_for => sub {
         my($c, $public_id, $args) = @_;
+        my $scheme = $c->req->url->scheme || '';
 
-        if($c->req->url->scheme eq 'https') {
-            $args->{'secure'} = 1 unless(defined $args->{'secure'});
+        if(not defined $args->{'secure'} and $scheme eq 'https') {
+            $args->{'secure'} = 1;
         }
 
         return  $self->url_for($public_id, $args);
