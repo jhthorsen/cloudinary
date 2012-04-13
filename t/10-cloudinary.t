@@ -6,7 +6,7 @@ use Mojo::Asset::File;
 use Mojo::IOLoop;
 use Mojolicious::Plugin::Cloudinary;
 
-plan tests => 29;
+plan tests => 27;
 
 # test data from
 # https://cloudinary.com/documentation/upload_images#request_authentication
@@ -58,7 +58,6 @@ my $cloudinary = Mojolicious::Plugin::Cloudinary->new({
                 if(ref($part->asset) eq 'Mojo::Asset::File') {
                     is($part->asset->path, $0, '...$0 in req->content');
                     is($part->headers->content_disposition, 'form-data; name="file"; filename="10-cloudinary.t"', '...filename=$0');
-                    is($part->headers->content_type, 'application/octet-stream', '...application/octet-stream');
                 }
             }
         });
