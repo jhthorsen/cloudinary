@@ -137,6 +137,7 @@ __PACKAGE__->attr(_ua => sub {
         timestamp => $epoch, # time()
         public_id => $str, # optional
         format => $str, # optional
+        resource_type => $str, # image or raw. default to image
         tags => ['foo', 'bar'], # optional
         on_success => sub {
             my($res) = @_;
@@ -149,7 +150,26 @@ __PACKAGE__->attr(_ua => sub {
     });
 
 Will upload a file to L<http://cloudinary.com> using the parameters given
-L</cloud_name> L</api_key> and L</api_secret>. The C<file> can be:
+L</cloud_name>, L</api_key> and L</api_secret>. C<$res> in C<on_success>
+will be the json response from cloudinary:
+
+    {
+        url => $str,
+        secure_url => $str,
+        public_id => $str,
+        version => $str,
+        width => $int, # only for images
+        height => $int, # only for images
+    }
+
+C<$res> for C<on_error> on the other hand can be either C<undef> if there
+was an issue connecting/communicating with cloudinary or a an error:
+
+    {
+        error => { message: $str },
+    }
+
+The C<file> can be:
 
 =over 4
 
@@ -169,7 +189,8 @@ C<res> in callbacks will be the JSON response from L<http://cloudinary.com>
 as a hash ref. It may also be C<undef> if something went wrong with the
 actual HTTP POST.
 
-See also L<https://cloudinary.com/documentation/upload_images>.
+See also L<https://cloudinary.com/documentation/upload_images> and
+L<http://cloudinary.com/documentation/upload_images#raw_uploads>.
 
 =cut
 
@@ -212,8 +233,8 @@ sub upload {
 
     $self->destroy({
         public_id => $public_id,
+        resource_type => $str, # image or raw. default to image
         on_success => sub {
-            my($res) = @_;
             # ...
         },
         on_error => sub {
@@ -223,6 +244,15 @@ sub upload {
     });
 
 Will delete an image from cloudinary, identified by C<$public_id>.
+C<on_success> will be called when the image got deleted, while C<on_error>
+is called if not: C<$res> can be either C<undef> if there was an issue
+connecting/communicating with cloudinary or a an error:
+
+    {
+        error => { message: $str },
+    }
+
+See also L<https://cloudinary.com/documentation/upload_images#deleting_images>.
 
 =cut
 
@@ -291,8 +321,12 @@ Example C<%args>:
     {
         w => 100, # width of image
         h => 150, # height of image
+        resource_type => $str, # image or raw. default to image
         secure => $bool, # use private_cdn or public cdn
     }
+
+See also L<http://cloudinary.com/documentation/upload_images#accessing_uploaded_images>
+and L<http://cloudinary.com/documentation/image_transformations>.
 
 =cut
 

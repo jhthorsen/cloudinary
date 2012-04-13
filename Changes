@@ -1,5 +1,9 @@
 Revision history for Mojolicious-Plugin-Cloudinary
 
+0.03
+       * Add public support for "resource_type"
+       * Add response structures to documentation
+
 0.02     Fri Apr  6 10:15:10 2012
        * Add destroy(), which deletes remote resources
        * Fix adding "type" parameter when calculating "signature"

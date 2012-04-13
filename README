@@ -88,6 +88,7 @@ METHODS
             timestamp => $epoch, # time()
             public_id => $str, # optional
             format => $str, # optional
+            resource_type => $str, # image or raw. default to image
             tags => ['foo', 'bar'], # optional
             on_success => sub {
                 my($res) = @_;
@@ -100,7 +101,26 @@ METHODS
         });
 
     Will upload a file to <http://cloudinary.com> using the parameters given
-    "cloud_name" "api_key" and "api_secret". The "file" can be:
+    "cloud_name", "api_key" and "api_secret". $res in "on_success" will be
+    the json response from cloudinary:
+
+        {
+            url => $str,
+            secure_url => $str,
+            public_id => $str,
+            version => $str,
+            width => $int, # only for images
+            height => $int, # only for images
+        }
+
+    $res for "on_error" on the other hand can be either "undef" if there was
+    an issue connecting/communicating with cloudinary or a an error:
+
+        {
+            error => { message: $str },
+        }
+
+    The "file" can be:
 
     *   A hash
 
@@ -116,13 +136,14 @@ METHODS
     <http://cloudinary.com> as a hash ref. It may also be "undef" if
     something went wrong with the actual HTTP POST.
 
-    See also <https://cloudinary.com/documentation/upload_images>.
+    See also <https://cloudinary.com/documentation/upload_images> and
+    <http://cloudinary.com/documentation/upload_images#raw_uploads>.
 
   destroy
         $self->destroy({
             public_id => $public_id,
+            resource_type => $str, # image or raw. default to image
             on_success => sub {
-                my($res) = @_;
                 # ...
             },
             on_error => sub {
@@ -132,6 +153,16 @@ METHODS
         });
 
     Will delete an image from cloudinary, identified by $public_id.
+    "on_success" will be called when the image got deleted, while "on_error"
+    is called if not: $res can be either "undef" if there was an issue
+    connecting/communicating with cloudinary or a an error:
+
+        {
+            error => { message: $str },
+        }
+
+    See also
+    <https://cloudinary.com/documentation/upload_images#deleting_images>.
 
   url_for
         $url_obj = $self->url_for("$public_id.$format", \%args);
@@ -148,6 +179,10 @@ METHODS
             h => 150, # height of image
             secure => $bool, # use private_cdn or public cdn
         }
+
+    See also
+    <http://cloudinary.com/documentation/upload_images#accessing_uploaded_im
+    ages>.
 
   register
     Adds the helpers to your controller:
