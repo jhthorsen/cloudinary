@@ -76,6 +76,14 @@ generic module - just skip calling L</register>.
     # and $delay->end in each on_xxx callback
     $delay->wait;
 
+=head2 url_for() examples
+
+    $cloudinary->url_for('billclinton.jpg', { type => 'facebook' });
+    $cloudinary->url_for('billclinton.jpg', { type => 'twitter_name', h => 70, w => 100 });
+    $cloudinary->url_for('18913373.jpg', { type => 'twitter_name' });
+    $cloudinary->url_for('my-uploaded-image.jpg', { h => 50, w => 50 });
+    $cloudinary->url_for('myrawid', { resource_type => 'raw' });
+
 =cut
 
 use Mojo::Base 'Mojolicious::Plugin';
@@ -137,7 +145,7 @@ __PACKAGE__->attr(_ua => sub {
         timestamp => $epoch, # time()
         public_id => $str, # optional
         format => $str, # optional
-        resource_type => $str, # image or raw. default to image
+        resource_type => $str, # image or raw. defaults to "image"
         tags => ['foo', 'bar'], # optional
         on_success => sub {
             my($res) = @_;
@@ -233,7 +241,7 @@ sub upload {
 
     $self->destroy({
         public_id => $public_id,
-        resource_type => $str, # image or raw. default to image
+        resource_type => $str, # image or raw. defaults to "image"
         on_success => sub {
             # ...
         },
@@ -321,7 +329,8 @@ Example C<%args>:
     {
         w => 100, # width of image
         h => 150, # height of image
-        resource_type => $str, # image or raw. default to image
+        resource_type => $str, # image or raw. defaults to "image"
+        type => $str, # upload, facebook. defaults to "upload"
         secure => $bool, # use private_cdn or public cdn
     }
 
