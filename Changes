@@ -1,6 +1,6 @@
 Revision history for Mojolicious-Plugin-Cloudinary
 
-0.03
+0.03     Fri Apr 13 18:18:55 2012
        * Add public support for "resource_type"
        * Add response structures to documentation
 
