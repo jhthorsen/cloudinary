@@ -51,6 +51,8 @@ use Mojo::Util qw/ sha1_sum url_escape /;
 use Scalar::Util 'weaken';
 use base qw/ Cloudinary Mojolicious::Plugin /;
 
+our $VERSION = $Cloudinary::VERSION;
+
 =head1 ATTRIBUTES
 
 =head2 js_image

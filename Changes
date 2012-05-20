@@ -1,5 +1,9 @@
 Revision history for Cloudinary
 
+0.11     Sun May 20 16:12:32 2012
+       * Need $VERSION in Mojolicious::Plugin::Cloudinary to make pause
+         happy.
+
 0.10     Sun May 20 16:04:13 2012
        * Split base functionality to Cloudinary.pm
 
