@@ -1,4 +1,7 @@
-Revision history for Mojolicious-Plugin-Cloudinary
+Revision history for Cloudinary
+
+0.10     Sun May 20 16:04:13 2012
+       * Split base functionality to Cloudinary.pm
 
 0.0401   Sun May 20 14:52:56 2012
        * Forgot to test for "data-src" when creating cloudinary_js_image()

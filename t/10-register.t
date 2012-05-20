@@ -5,7 +5,7 @@ use Test::More;
 use Test::Mojo;
 use Mojolicious::Lite;
 
-plan tests => 15;
+plan tests => 24;
 my $t = Test::Mojo->new('main');
 
 {
@@ -18,6 +18,9 @@ my $t = Test::Mojo->new('main');
         my $self = shift;
         $self->render_text($self->cloudinary_js_image("1234567890.jpg" => { w => 50, height => 50 }));
     };
+    get '/upload' => sub { $_[0]->cloudinary_upload; $_[0]->render_text('upload') };
+    get '/destroy' => sub { $_[0]->cloudinary_destroy; $_[0]->render_text('destroy') };
+    get '/url-for' => sub { $_[0]->render_text($_[0]->cloudinary_url_for('yey.png')) };
 }
 
 {
@@ -38,5 +41,20 @@ my $t = Test::Mojo->new('main');
         ->content_like(qr{ data-height="50"})
         ->content_like(qr{ alt="1234567890\.jpg"})
         ->content_like(qr{>$})
+        ;
+
+    $t->get_ok('/upload')
+        ->status_is(500)
+        ->content_like(qr{Usage.*upload\(\{ file})
+        ;
+
+    $t->get_ok('/destroy')
+        ->status_is(500)
+        ->content_like(qr{Usage.*destroy\(\{ public_id})
+        ;
+
+    $t->get_ok('/url-for')
+        ->status_is(200)
+        ->content_is('http://res.cloudinary.com/test/image/upload/yey.png')
         ;
 }

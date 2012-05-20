@@ -4,13 +4,13 @@ use lib qw(lib);
 use Test::More;
 use Mojo::Asset::File;
 use Mojo::IOLoop;
-use Mojolicious::Plugin::Cloudinary;
+use Cloudinary;
 
 plan tests => 27;
 
 # test data from
 # https://cloudinary.com/documentation/upload_images#request_authentication
-my $cloudinary = Mojolicious::Plugin::Cloudinary->new({
+my $cloudinary = Cloudinary->new({
                      api_key => '1234567890',
                      api_secret => 'abcd',
                      cloud_name => 'demo',
