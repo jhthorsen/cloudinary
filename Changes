@@ -1,5 +1,8 @@
 Revision history for Cloudinary
 
+0.1101   Sun May 20 16:17:08 2012
+       * Not sure why pause is still complaining...
+
 0.11     Sun May 20 16:12:32 2012
        * Need $VERSION in Mojolicious::Plugin::Cloudinary to make pause
          happy.

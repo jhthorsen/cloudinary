@@ -6,7 +6,7 @@ Cloudinary - Talk with cloudinary.com
 
 =head1 VERSION
 
-0.11
+0.1101
 
 =head1 DESCRIPTION
 
@@ -69,7 +69,7 @@ use Mojo::UserAgent;
 use Mojo::Util qw/ sha1_sum url_escape /;
 use Scalar::Util 'weaken';
 
-our $VERSION = eval '0.11';
+our $VERSION = eval '0.1101';
 our(%SHORTER, %LONGER);
 my @SIGNATURE_KEYS = qw/ callback eager format public_id tags timestamp transformation type /;
 

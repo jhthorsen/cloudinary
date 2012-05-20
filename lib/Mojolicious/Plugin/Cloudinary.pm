@@ -51,7 +51,7 @@ use Mojo::Util qw/ sha1_sum url_escape /;
 use Scalar::Util 'weaken';
 use base qw/ Cloudinary Mojolicious::Plugin /;
 
-our $VERSION = $Cloudinary::VERSION;
+our $VERSION = 0.0402; # just need something higher than the previous version
 
 =head1 ATTRIBUTES
 
