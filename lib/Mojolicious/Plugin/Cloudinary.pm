@@ -134,6 +134,8 @@ sub register {
         $self->$k($config->{$k}) if exists $config->{$k};
     }
 
+    $self->_ua($app->ua);
+
     $app->helper(cloudinary_upload => sub {
         my $c = shift;
         $self->upload(@_);
