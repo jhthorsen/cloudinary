@@ -6,13 +6,21 @@ Mojolicious::Plugin::Cloudinary - Talk with cloudinary.com
 
 =head1 VERSION
 
-0.03
+0.04
 
 =head1 DESCRIPTION
 
 This module lets you interface to L<http://cloudinary.com>. Its primary
 target is to be a L<Mojolicious> plugin, but it can also be used as a
 generic module - just skip calling L</register>.
+
+=head2 Option expansion
+
+As from 0.04 all methods support the short and long option, meaning
+the examples below work the same:
+
+    $self->url_for('billclinton.jpg' => { w => 50 });
+    $self->url_for('billclinton.jpg' => { width => 50 });
 
 =head1 SYNOPSIS
 
@@ -92,8 +100,31 @@ use Mojo::UserAgent;
 use Mojo::Util qw/ sha1_sum url_escape /;
 use Scalar::Util 'weaken';
 
-our $VERSION = eval '0.03';
+our $VERSION = eval '0.04';
+our(%SHORTER, %LONGER);
 my @SIGNATURE_KEYS = qw/ callback eager format public_id tags timestamp transformation type /;
+
+{
+    %LONGER = (
+        a => 'angle',
+        b => 'background',
+        c => 'crop',
+        d => 'default_image',
+        e => 'effect',
+        f => 'fetch_format',
+        g => 'gravity',
+        h => 'height',
+        l => 'overlay',
+        p => 'prefix',
+        q => 'quality',
+        r => 'radius',
+        t => 'named_transformation',
+        w => 'width',
+        x => 'x',
+        y => 'y',
+    );
+    %SHORTER = reverse %LONGER;
+}
 
 =head1 ATTRIBUTES
 
@@ -113,12 +144,18 @@ Your API secret from L<https://cloudinary.com/console>
 
 Your private CDN url from L<https://cloudinary.com/console>.
 
+=head2 js_image
+
+This string will be used as the image src for images constructed by
+L</cloudinary_js_image>. The default is "/image/blank.png".
+
 =cut
 
 __PACKAGE__->attr(cloud_name => sub { die 'cloud_name is required in constructor' });
 __PACKAGE__->attr(api_key => sub { die 'api_key is required in constructor' });
 __PACKAGE__->attr(api_secret => sub { die 'api_secret is required in constructor' });
 __PACKAGE__->attr(private_cdn => sub { die 'private_cdn is required in constructor' });
+__PACKAGE__->attr(js_image => sub { '/image/blank.png' });
 __PACKAGE__->attr(_api_url => sub { 'http://api.cloudinary.com/v1_1' });
 __PACKAGE__->attr(_public_cdn => sub { 'http://res.cloudinary.com' });
 __PACKAGE__->attr(_ua => sub {
@@ -350,7 +387,7 @@ sub url_for {
         $self->cloud_name,
         $args->{'resource_type'} || 'image',
         $args->{'type'} || 'upload',
-        join(',', map { $_ .'_' .$args->{$_} } sort keys %$args),
+        join(',', map { ($SHORTER{$_} || $_) .'_' .$args->{$_} } sort keys %$args),
         "$public_id.$format",
     );
 
@@ -372,6 +409,47 @@ See L</upload>.
 =item * cloudinary_url_for
 
 See L</url_for>.
+
+=item * cloudinary_image
+
+    $str = $c->cloudinary_image($public_id, $url_for_args, $image_args);
+
+This will use L<Mojolicious::Plugin::TagHelpers/image> to create an image
+tag where "src" is set to a cloudinary image. C<$url_for_args> are passed
+on to L</url_for> and C<$image_args> are passed on to
+L<Mojolicious::Plugin::TagHelpers/image>.
+
+=item * cloudinary_js_image
+
+    $str = $c->cloudinary_js_image($public_id, $url_for_args);
+
+About the same as L</cloudinary_image>, except it creates an image which can
+handled by the cloudinary jQuery plugin which you can read more about here:
+L<http://cloudinary.com/blog/cloudinary_s_jquery_library_for_embedding_and_transforming_images>
+
+Example usage:
+
+    $c->cloudinary_js_image(1234567890 => {
+        width => 115,
+        height => 115,
+        crop => 'thumb',
+        gravity => 'faces',
+        radius => '20',
+    });
+
+...will produce:
+
+    <img src="/image/blank.png"
+        class="cloudinary-js-image"
+        alt="1234567890"
+        data-src="1234567890"
+        data-width="115"
+        data-height="135"
+        data-crop="thumb"
+        data-gravity="faces"
+        data-radius="20">
+
+Note: The "class" and "alt" attributes are fixed for now.
 
 =back
 
@@ -400,7 +478,35 @@ sub register {
             $args->{'secure'} = 1;
         }
 
-        return  $self->url_for($public_id, $args);
+        return $self->url_for($public_id, $args);
+    });
+    $app->helper(cloudinary_image => sub {
+        my($c, $public_id, $args, $image_args) = @_;
+        my $scheme = $c->req->url->scheme || '';
+
+        if(not defined $args->{'secure'} and $scheme eq 'https') {
+            $args->{'secure'} = 1;
+        }
+
+        return $c->image($self->url_for($public_id, $args), alt => $public_id, %$image_args);
+    });
+    $app->helper(cloudinary_js_image => sub {
+        my($c, $public_id, $args) = @_;
+        my $scheme = $c->req->url->scheme || '';
+
+        if(not defined $args->{'secure'} and $scheme eq 'https') {
+            $args->{'secure'} = 1;
+        }
+
+        return $c->image(
+            $self->js_image,
+            alt => $public_id,
+            class => 'cloudinary-js-image',
+            map {
+                my $k = $LONGER{$_} || $_;
+                ("data-$k" => $args->{$_})
+            } keys %$args
+        );
     });
 }
 

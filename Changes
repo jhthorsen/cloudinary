@@ -1,5 +1,15 @@
 Revision history for Mojolicious-Plugin-Cloudinary
 
+0.04     Sun May 20 12:30:20 2012
+       * Add cloudinary_image() mojolicious helper
+       * Add cloudinary_js_image() mojolicious helper
+       * Add support for both short and long options to methods that need to
+         shorten or expand w/width, h/height and friends:
+         a => 'angle', b => 'background', c => 'crop', d => 'default_image',
+         e => 'effect', f => 'fetch_format', g => 'gravity', h => 'height',
+         l => 'overlay', p => 'prefix', q => 'quality', r => 'radius',
+         t => 'named_transformation', w => 'width', x => 'x', y => 'y',
+
 0.03     Fri Apr 13 18:18:55 2012
        * Add public support for "resource_type"
        * Add response structures to documentation

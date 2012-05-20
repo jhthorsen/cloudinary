@@ -2,12 +2,19 @@ NAME
     Mojolicious::Plugin::Cloudinary - Talk with cloudinary.com
 
 VERSION
-    0.03
+    0.04
 
 DESCRIPTION
     This module lets you interface to <http://cloudinary.com>. Its primary
     target is to be a Mojolicious plugin, but it can also be used as a
     generic module - just skip calling "register".
+
+  Option expansion
+    As from 0.04 all methods support the short and long option, meaning the
+    examples below work the same:
+
+        $self->url_for('billclinton.jpg' => { w => 50 });
+        $self->url_for('billclinton.jpg' => { width => 50 });
 
 SYNOPSIS
   With mojolicious
@@ -87,6 +94,10 @@ ATTRIBUTES
 
   private_cdn
     Your private CDN url from <https://cloudinary.com/console>.
+
+  js_image
+    This string will be used as the image src for images constructed by
+    "cloudinary_js_image". The default is "/image/blank.png".
 
 METHODS
   upload
@@ -205,6 +216,49 @@ METHODS
     *   cloudinary_url_for
 
         See "url_for".
+
+    *   cloudinary_image
+
+            $str = $c->cloudinary_image($public_id, $url_for_args, $image_args);
+
+        This will use "image" in Mojolicious::Plugin::TagHelpers to create
+        an image tag where "src" is set to a cloudinary image. $url_for_args
+        are passed on to "url_for" and $image_args are passed on to "image"
+        in Mojolicious::Plugin::TagHelpers.
+
+    *   cloudinary_js_image
+
+            $str = $c->cloudinary_js_image($public_id, $url_for_args);
+
+        About the same as "cloudinary_image", except it creates an image
+        which can handled by the cloudinary jQuery plugin which you can read
+        more about here:
+        <http://cloudinary.com/blog/cloudinary_s_jquery_library_for_embeddin
+        g_and_transforming_images>
+
+        Example usage:
+
+            $c->cloudinary_js_image(1234567890 => {
+                width => 115,
+                height => 115,
+                crop => 'thumb',
+                gravity => 'faces',
+                radius => '20',
+            });
+
+        ...will produce:
+
+            <img src="/image/blank.png"
+                class="cloudinary-js-image"
+                alt="1234567890"
+                data-src="1234567890"
+                data-width="115"
+                data-height="135"
+                data-crop="thumb"
+                data-gravity="faces"
+                data-radius="20">
+
+        Note: The "class" and "alt" attributes are fixed for now.
 
 COPYRIGHT & LICENSE
     See Oppstarter
