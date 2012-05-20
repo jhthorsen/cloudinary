@@ -2,7 +2,7 @@ NAME
     Mojolicious::Plugin::Cloudinary - Talk with cloudinary.com
 
 VERSION
-    0.04
+    0.0401
 
 DESCRIPTION
     This module lets you interface to <http://cloudinary.com>. Its primary

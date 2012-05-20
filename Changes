@@ -1,5 +1,8 @@
 Revision history for Mojolicious-Plugin-Cloudinary
 
+0.0401   Sun May 20 14:52:56 2012
+       * Forgot to test for "data-src" when creating cloudinary_js_image()
+
 0.04     Sun May 20 12:30:20 2012
        * Add cloudinary_image() mojolicious helper
        * Add cloudinary_js_image() mojolicious helper

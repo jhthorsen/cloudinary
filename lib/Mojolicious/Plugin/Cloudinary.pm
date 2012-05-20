@@ -6,7 +6,7 @@ Mojolicious::Plugin::Cloudinary - Talk with cloudinary.com
 
 =head1 VERSION
 
-0.04
+0.0401
 
 =head1 DESCRIPTION
 
@@ -100,7 +100,7 @@ use Mojo::UserAgent;
 use Mojo::Util qw/ sha1_sum url_escape /;
 use Scalar::Util 'weaken';
 
-our $VERSION = eval '0.04';
+our $VERSION = eval '0.0401';
 our(%SHORTER, %LONGER);
 my @SIGNATURE_KEYS = qw/ callback eager format public_id tags timestamp transformation type /;
 
@@ -500,8 +500,9 @@ sub register {
 
         return $c->image(
             $self->js_image,
-            alt => $public_id,
-            class => 'cloudinary-js-image',
+            'alt' => $public_id,
+            'class' => 'cloudinary-js-image',
+            'data-src' => $public_id,
             map {
                 my $k = $LONGER{$_} || $_;
                 ("data-$k" => $args->{$_})
