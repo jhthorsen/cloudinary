@@ -6,7 +6,7 @@ use Mojo::Asset::File;
 use Mojo::IOLoop;
 use Cloudinary;
 
-plan tests => 27;
+plan tests => 28;
 
 # test data from
 # https://cloudinary.com/documentation/upload_images#request_authentication
@@ -107,5 +107,10 @@ my $cloudinary = Cloudinary->new({
         $cloudinary->url_for('sample', { w => 100, h => 140 }),
         'http://res.cloudinary.com/demo/image/upload/h_140,w_100/sample.jpg',
         'url for sample - with transformation'
+    );
+    is(
+        $cloudinary->url_for('billclinton.jpg', { type => 'facebook', width => 100, h => 140 }),
+        'http://res.cloudinary.com/demo/image/facebook/h_140,w_100/billclinton.jpg',
+        'url for facebook image',
     );
 }

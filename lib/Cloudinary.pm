@@ -350,7 +350,11 @@ sub url_for {
         $self->cloud_name,
         $args->{'resource_type'} || 'image',
         $args->{'type'} || 'upload',
-        join(',', map { ($SHORTER{$_} || $_) .'_' .$args->{$_} } sort keys %$args),
+        join(',',
+            map { ($SHORTER{$_} || $_) .'_' .$args->{$_} }
+            grep { $_ ne 'resource_type' and $_ ne 'type' }
+            sort keys %$args
+        ),
         "$public_id.$format",
     );
 

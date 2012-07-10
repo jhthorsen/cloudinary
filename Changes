@@ -1,5 +1,8 @@
 Revision history for Cloudinary
 
+0.1102
+       * Fix url_for(..., { type => 'facebook' });
+
 0.1101   Sun May 20 16:17:08 2012
        * Not sure why pause is still complaining...
 
