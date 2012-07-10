@@ -61,6 +61,27 @@ the examples below work the same:
     $cloudinary->url_for('my-uploaded-image.jpg', { h => 50, w => 50 });
     $cloudinary->url_for('myrawid', { resource_type => 'raw' });
 
+=head2 Aliases
+
+This module provides alias for the Cloudinary transformations:
+
+    a => 'angle',
+    b => 'background',
+    c => 'crop',
+    d => 'default_image',
+    e => 'effect',
+    f => 'fetch_format',
+    g => 'gravity',
+    h => 'height',
+    l => 'overlay',
+    p => 'prefix',
+    q => 'quality',
+    r => 'radius',
+    t => 'named_transformation',
+    w => 'width',
+    x => 'x',
+    y => 'y',
+
 =cut
 
 use Mojo::Base -base;
