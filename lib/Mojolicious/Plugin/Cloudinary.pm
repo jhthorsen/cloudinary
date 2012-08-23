@@ -29,17 +29,20 @@ your L<Mojolicious> web application. See L</HELPERS> for details.
         my $self = shift;
 
         $self->render_later;
-        $self->cloudinary_upload({
-            file => $self->param('upload_param'),
-            on_success => sub {
-                my $res = shift;
-                $self->render_json($res);
+        Mojo::IOLoop->delay(
+            sub {
+                my($delay) = @_;
+                $self->cloudinary_upload({
+                    file => $self->param('upload_param'),
+                    delay => $delay->begin,
+                });
             },
-            on_error => sub {
-                my $res = shift || { error => 'Unknown' };
-                $self->render_json($res);
+            sub {
+                my($delay, $res, $tx) = @_;
+                return $self->render_json($res) if $res;
+                return $self->render_exception;
             },
-        });
+        );
     }
 
 =cut

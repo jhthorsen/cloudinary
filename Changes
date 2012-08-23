@@ -1,5 +1,8 @@
 Revision history for Cloudinary
 
+0.12
+       * Add support for Mojo::IOLoop->delay()
+
 0.1102   Tue Jul 10 21:49:21 2012
        * Fix url_for(..., { type => 'facebook' });
 

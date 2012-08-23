@@ -227,34 +227,31 @@ sub upload {
     my($self, $args) = @_;
 
     # TODO: transformation, eager
-    $args->{'resource_type'} ||= 'image';
-    $args->{'timestamp'} ||= time;
+    $args->{resource_type} ||= 'image';
+    $args->{timestamp} ||= time;
 
-    for my $name (qw/ file on_success /) {
-        defined $args->{$name}
-            or die "Usage: \$self->upload({ $name => ... })";
-    }
+    die "Usage: \$self->upload({ file => ... })" unless defined $args->{file};
 
-    if(ref $args->{'tags'} eq 'ARRAY') {
-        $args->{'tags'} = join ',', @{ $args->{'tags'} };
+    if(ref $args->{tags} eq 'ARRAY') {
+        $args->{tags} = join ',', @{ $args->{tags} };
     }
-    if(UNIVERSAL::isa($args->{'file'}, 'Mojo::Asset')) {
-        $args->{'file'} = {
-            file => $args->{'file'},
-            filename => $args->{'filename'} || basename($args->{'file'}->path),
+    if(UNIVERSAL::isa($args->{file}, 'Mojo::Asset')) {
+        $args->{file} = {
+            file => $args->{file},
+            filename => $args->{filename} || basename($args->{file}->path),
         };
     }
-    elsif(UNIVERSAL::isa($args->{'file'}, 'Mojo::Upload')) {
-        $args->{'file'} = {
-            file => $args->{'file'}->asset,
-            filename => $args->{'file'}->filename,
+    elsif(UNIVERSAL::isa($args->{file}, 'Mojo::Upload')) {
+        $args->{file} = {
+            file => $args->{file}->asset,
+            filename => $args->{file}->filename,
         };
     }
 
     $self->_call_api(upload => $args, {
         timestamp => time,
         (map { ($_, $args->{$_}) } grep { defined $args->{$_} } @SIGNATURE_KEYS),
-        file => $args->{'file'},
+        file => $args->{file},
     });
 }
 
@@ -288,38 +285,44 @@ See also L<https://cloudinary.com/documentation/upload_images#deleting_images>.
 sub destroy {
     my($self, $args) = @_;
 
-    for my $name (qw/ public_id on_success /) {
-        defined $args->{$name}
-            or die "Usage: \$self->destroy({ $name => ... })";
-    }
+    die "Usage: \$self->destroy({ public_id => ... })" unless defined $args->{public_id};
 
-    $args->{'resource_type'} ||= 'image';
+    $args->{resource_type} ||= 'image';
 
     $self->_call_api(destroy => $args, {
-        public_id => $args->{'public_id'},
-        timestamp => $args->{'timestamp'} || time,
-        type => $args->{'type'} || 'upload',
+        public_id => $args->{public_id},
+        timestamp => $args->{timestamp} || time,
+        type => $args->{type} || 'upload',
     });
 }
 
 sub _call_api {
     my($self, $action, $args, $post) = @_;
-    my $url = join '/', $self->_api_url, $self->cloud_name, $args->{'resource_type'}, $action;
-    my $on_error = $args->{'on_error'} || sub {};
-    my $on_success = $args->{'on_success'};
+    my $url = join '/', $self->_api_url, $self->cloud_name, $args->{resource_type}, $action;
     my $headers = { 'Content-Type' => 'multipart/form-data' };
 
-    $post->{'api_key'} = $self->api_key;
-    $post->{'signature'} = $self->_api_sign_request($post);
+    $post->{api_key} = $self->api_key;
+    $post->{signature} = $self->_api_sign_request($post);
 
+    Scalar::Util::weaken($self);
     $self->_ua->post_form($url, $post, $headers, sub {
         my($ua, $tx) = @_;
 
         if($tx->success) {
-            $on_success->($tx->res->json);
+            if($args->{on_success}) {
+                $args->{on_success}->($tx->res->json);
+            }
+            else {
+                $args->{delay}->($self, $tx->res->json, $tx);
+            }
         }
         else {
-            $on_error->($tx->res->json, $tx);
+            if($args->{on_error}) {
+                $args->{on_error}->($tx->res->json);
+            }
+            elsif($args->{delay}) {
+                $args->{delay}->($self, undef, $tx);
+            }
         }
     });
 }
@@ -365,12 +368,12 @@ sub url_for {
     my $public_id = shift or die 'Usage: $self->url_for($public_id, ...)';
     my $args = shift || {};
     my $format = $public_id =~ s/\.(\w+)// ? $1 : 'jpg';
-    my $url = Mojo::URL->new(delete $args->{'secure'} ? $self->private_cdn : $self->_public_cdn);
+    my $url = Mojo::URL->new(delete $args->{secure} ? $self->private_cdn : $self->_public_cdn);
 
     $url->path(join '/', grep { length }
         $self->cloud_name,
-        $args->{'resource_type'} || 'image',
-        $args->{'type'} || 'upload',
+        $args->{resource_type} || 'image',
+        $args->{type} || 'upload',
         join(',',
             map { ($SHORTER{$_} || $_) .'_' .$args->{$_} }
             grep { $_ ne 'resource_type' and $_ ne 'type' }
