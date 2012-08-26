@@ -2,7 +2,7 @@ NAME
     Cloudinary - Talk with cloudinary.com
 
 VERSION
-    0.1102
+    0.12
 
 DESCRIPTION
     This module lets you interface to <http://cloudinary.com>.

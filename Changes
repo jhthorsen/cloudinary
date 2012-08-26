@@ -1,6 +1,6 @@
 Revision history for Cloudinary
 
-0.12
+0.12     Sun Aug 26 08:44:51 2012
        * Add support for Mojo::IOLoop->delay()
 
 0.1102   Tue Jul 10 21:49:21 2012
