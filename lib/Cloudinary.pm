@@ -224,9 +224,11 @@ L<http://cloudinary.com/documentation/upload_images#raw_uploads>.
 =cut
 
 sub upload {
-    my($self, $args) = @_;
+    my($self, $args, $cb) = @_;
 
     # TODO: transformation, eager
+    $args = { file => $args } if ref $args ne 'HASH';
+    $args->{cb} = $cb;
     $args->{resource_type} ||= 'image';
     $args->{timestamp} ||= time;
 
@@ -283,10 +285,13 @@ See also L<https://cloudinary.com/documentation/upload_images#deleting_images>.
 =cut
 
 sub destroy {
-    my($self, $args) = @_;
+    my($self, $args, $cb) = @_;
+
+    $args = { public_id => $args } unless ref $args eq 'HASH';
 
     die "Usage: \$self->destroy({ public_id => ... })" unless defined $args->{public_id};
 
+    $args->{cb} = $cb;
     $args->{resource_type} ||= 'image';
 
     $self->_call_api(destroy => $args, {
@@ -305,10 +310,13 @@ sub _call_api {
     $post->{signature} = $self->_api_sign_request($post);
 
     Scalar::Util::weaken($self);
-    $self->_ua->post_form($url, $post, $headers, sub {
+    $self->_ua->post($url, $headers, form => $post, sub {
         my($ua, $tx) = @_;
 
-        if($tx->success) {
+        if($args->{cb}) {
+            $args->{cb}->($self, $tx->res->json || { error => $tx->error || 'Unknown error' });
+        }
+        elsif($tx->success) {
             if($args->{on_success}) {
                 $args->{on_success}->($tx->res->json);
             }

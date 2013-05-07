@@ -39,7 +39,7 @@ your L<Mojolicious> web application. See L</HELPERS> for details.
             },
             sub {
                 my($delay, $res, $tx) = @_;
-                return $self->render_json($res) if $res;
+                return $self->render(json => $res) if $res;
                 return $self->render_exception;
             },
         );
