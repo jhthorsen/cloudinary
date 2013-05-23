@@ -1,6 +1,6 @@
 Revision history for Cloudinary
 
-0.13
+0.13     Thu May 23 21:19:20 2013
        * post_form() is deprecated
        * Add support for easier API when working with images
 
