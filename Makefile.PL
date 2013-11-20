@@ -1,16 +1,25 @@
-use inc::Module::Install;
-
-name q(Cloudinary);
-all_from q(lib/Cloudinary.pm);
-
-requires q(Mojolicious) => 2.65;
-requires q(base) => 2.10;
-
-test_requires q(Test::More) => 0.90;
-
-bugtracker q(http://rt.cpan.org/NoAuth/Bugs.html?Dist=Cloudinary);
-homepage q(http://search.cpan.org/dist/Cloudinary);
-repository q(git://github.com/jhthorsen/cloudinary);
-
-auto_install;
-WriteAll;
+use ExtUtils::MakeMaker;
+WriteMakefile(
+  NAME => 'Cloudinary',
+  ABSTRACT_FROM => 'lib/Cloudinary.pm',
+  VERSION_FROM => 'lib/Cloudinary.pm',
+  AUTHOR => 'Jan Henning Thorsen <jhthorsen@cpan.org>',
+  LICENSE => 'perl',
+  PREREQ_PM => {
+    'Mojolicious' => '4.30',
+  },
+  BUILD_REQUIRES => {
+    'Test::More' => '0.90',
+  },
+  META_MERGE => {
+    resources => {
+      license => 'http://dev.perl.org/licenses/',
+      homepage => 'https://metacpan.org/release/Cloudinary',
+      bugtracker => 'https://github.com/jhthorsen/cloudinary/issues',
+      repository => 'https://github.com/jhthorsen/cloudinary.git',
+    },
+  },
+  test => {
+    TESTS => 't/*.t',
+  },
+);

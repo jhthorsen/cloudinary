@@ -1,5 +1,8 @@
 Revision history for Cloudinary
 
+0.1301   Wed Nov 20 11:51:36 2013
+       * Fix RT#89141: MYMETA.{yml,json} must not be bundled
+
 0.13     Thu May 23 21:19:20 2013
        * post_form() is deprecated
        * Add support for easier API when working with images
