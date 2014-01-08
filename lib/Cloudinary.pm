@@ -229,7 +229,6 @@ sub upload {
 
   # TODO: transformation, eager
   $args = { file => $args } if ref $args ne 'HASH';
-  $args->{cb} = $cb;
   $args->{resource_type} ||= 'image';
   $args->{timestamp} ||= time;
 
@@ -250,7 +249,8 @@ sub upload {
     {
       timestamp => time,
       (map { ($_, $args->{$_}) } grep { defined $args->{$_} } @SIGNATURE_KEYS), file => $args->{file},
-    }
+    },
+    $cb,
   );
 }
 
@@ -287,17 +287,21 @@ sub destroy {
 
   die "Usage: \$self->destroy({ public_id => ... })" unless defined $args->{public_id};
 
-  $args->{cb} = $cb;
   $args->{resource_type} ||= 'image';
 
   $self->_call_api(
     destroy => $args,
-    { public_id => $args->{public_id}, timestamp => $args->{timestamp} || time, type => $args->{type} || 'upload', }
+    {
+      public_id => $args->{public_id},
+      timestamp => $args->{timestamp} || time,
+      type => $args->{type} || 'upload',
+    },
+    $cb,
   );
 }
 
 sub _call_api {
-  my($self, $action, $args, $post) = @_;
+  my($self, $action, $args, $post, $cb) = @_;
   my $url = join '/', $self->_api_url, $self->cloud_name, $args->{resource_type}, $action;
   my $headers = { 'Content-Type' => 'multipart/form-data' };
 
@@ -311,22 +315,26 @@ sub _call_api {
     sub {
       my($ua, $tx) = @_;
 
-      if($args->{cb}) {
-        $args->{cb}->($self, $tx->res->json || { error => $tx->error || 'Unknown error' });
+      if($cb) {
+        $self->$cb($self, $tx->res->json || { error => $tx->error || 'Unknown error' });
       }
-      elsif ($tx->success) {
+      elsif($tx->success) {
         if($args->{on_success}) {
+          warn "[Cloudinary] 'on_success' will be deprecated!";
           $args->{on_success}->($tx->res->json);
         }
-        else {
+        elsif($args->{delay}) {
+          warn "[Cloudinary] 'delay' will be deprecated!";
           $args->{delay}->($self, $tx->res->json, $tx);
         }
       }
       else {
         if($args->{on_error}) {
+          warn "[Cloudinary] 'on_error' will be deprecated!";
           $args->{on_error}->($tx->res->json);
         }
         elsif ($args->{delay}) {
+          warn "[Cloudinary] 'delay' will be deprecated!";
           $args->{delay}->($self, undef, $tx);
         }
       }
