@@ -11,39 +11,42 @@ your L<Mojolicious> web application. See L</HELPERS> for details.
 
 =head1 SYNOPSIS
 
-    package MyWebApp;
-    use Mojo::Base 'Mojolicious';
+  package MyWebApp;
+  use Mojo::Base 'Mojolicious';
 
-    sub startup {
-        my $self = shift;
-        $self->plugin('Mojolicious::Plugin::Cloudinary', {
-            cloud_name => $str,
-            api_key => $str,
-            api_secret => $str,
-        });
-    }
+  sub startup {
+    my $self = shift;
 
-    package MyWebApp::SomeController;
+    $self->plugin('Mojolicious::Plugin::Cloudinary', {
+      cloud_name => $str,
+      api_key => $str,
+      api_secret => $str,
+    });
+  }
 
-    sub upload {
-        my $self = shift;
+  package MyWebApp::SomeController;
 
-        $self->render_later;
-        Mojo::IOLoop->delay(
-            sub {
-                my($delay) = @_;
-                $self->cloudinary_upload({
-                    file => $self->param('upload_param'),
-                    delay => $delay->begin,
-                });
-            },
-            sub {
-                my($delay, $res, $tx) = @_;
-                return $self->render(json => $res) if $res;
-                return $self->render_exception;
-            },
+  sub upload {
+    my $self = shift;
+
+    $self->render_later;
+    Mojo::IOLoop->delay(
+      sub {
+        my($delay) = @_;
+        $self->cloudinary_upload(
+          {
+            file => $self->param('upload_param'),
+          },
+          $delay->begin,
         );
-    }
+      },
+      sub {
+        my($delay, $res, $tx) = @_;
+        return $self->render(json => $res) if $res;
+        return $self->render_exception;
+      },
+    );
+  }
 
 =cut
 
@@ -54,7 +57,7 @@ use Mojo::Util qw/ sha1_sum url_escape /;
 use Scalar::Util 'weaken';
 use base qw/ Cloudinary Mojolicious::Plugin /;
 
-our $VERSION = 0.0402; # just need something higher than the previous version
+our $VERSION = 0.0402;    # just need something higher than the previous version
 
 =head1 ATTRIBUTES
 
@@ -65,7 +68,7 @@ L</cloudinary_js_image>. The default is "/image/blank.png".
 
 =cut
 
-__PACKAGE__->attr(js_image => sub { '/image/blank.png' });
+has js_image => '/image/blank.png';
 
 =head1 HELPERS
 
@@ -83,7 +86,7 @@ See L<Cloudinary/url_for>.
 
 =head2 cloudinary_image
 
-    $str = $c->cloudinary_image($public_id, $url_for_args, $image_args);
+  $str = $c->cloudinary_image($public_id, $url_for_args, $image_args);
 
 This will use L<Mojolicious::Plugin::TagHelpers/image> to create an image
 tag where "src" is set to a cloudinary image. C<$url_for_args> are passed
@@ -92,7 +95,7 @@ L<Mojolicious::Plugin::TagHelpers/image>.
 
 =head2 cloudinary_js_image
 
-    $str = $c->cloudinary_js_image($public_id, $url_for_args);
+  $str = $c->cloudinary_js_image($public_id, $url_for_args);
 
 About the same as L</cloudinary_image>, except it creates an image which can
 handled by the cloudinary jQuery plugin which you can read more about here:
@@ -100,25 +103,25 @@ L<http://cloudinary.com/blog/cloudinary_s_jquery_library_for_embedding_and_trans
 
 Example usage:
 
-    $c->cloudinary_js_image(1234567890 => {
-        width => 115,
-        height => 115,
-        crop => 'thumb',
-        gravity => 'faces',
-        radius => '20',
-    });
+  $c->cloudinary_js_image(1234567890 => {
+    width => 115,
+    height => 115,
+    crop => 'thumb',
+    gravity => 'faces',
+    radius => '20',
+  });
 
 ...will produce:
 
-    <img src="/image/blank.png"
-        class="cloudinary-js-image"
-        alt="1234567890"
-        data-src="1234567890"
-        data-width="115"
-        data-height="135"
-        data-crop="thumb"
-        data-gravity="faces"
-        data-radius="20">
+  <img src="/image/blank.png"
+    class="cloudinary-js-image"
+    alt="1234567890"
+    data-src="1234567890"
+    data-width="115"
+    data-height="135"
+    data-crop="thumb"
+    data-gravity="faces"
+    data-radius="20">
 
 Note: The "class" and "alt" attributes are fixed for now.
 
@@ -131,61 +134,71 @@ Will register the L</HELPERS> in the L<Mojolicious> application.
 =cut
 
 sub register {
-    my($self, $app, $config) = @_;
+  my($self, $app, $config) = @_;
 
-    for my $k (keys %{ $config || {} }) {
-        $self->$k($config->{$k}) if exists $config->{$k};
+  for my $k (keys %{ $config || {} }) {
+    $self->$k($config->{$k}) if exists $config->{$k};
+  }
+
+  $self->_ua($app->ua);
+
+  $app->helper(
+    cloudinary_upload => sub {
+      my $c = shift;
+      $self->upload(@_);
     }
+  );
+  $app->helper(
+    cloudinary_destroy => sub {
+      my $c = shift;
+      $self->destroy(@_);
+    }
+  );
+  $app->helper(
+    cloudinary_url_for => sub {
+      my($c, $public_id, $args) = @_;
+      my $scheme = $c->req->url->scheme || '';
 
-    $self->_ua($app->ua);
+      if(not defined $args->{'secure'} and $scheme eq 'https') {
+        $args->{'secure'} = 1;
+      }
 
-    $app->helper(cloudinary_upload => sub {
-        my $c = shift;
-        $self->upload(@_);
-    });
-    $app->helper(cloudinary_destroy => sub {
-        my $c = shift;
-        $self->destroy(@_);
-    });
-    $app->helper(cloudinary_url_for => sub {
-        my($c, $public_id, $args) = @_;
-        my $scheme = $c->req->url->scheme || '';
+      return $self->url_for($public_id, $args);
+    }
+  );
+  $app->helper(
+    cloudinary_image => sub {
+      my($c, $public_id, $args, $image_args) = @_;
+      my $scheme = $c->req->url->scheme || '';
 
-        if(not defined $args->{'secure'} and $scheme eq 'https') {
-            $args->{'secure'} = 1;
-        }
+      if(not defined $args->{'secure'} and $scheme eq 'https') {
+        $args->{'secure'} = 1;
+      }
 
-        return $self->url_for($public_id, $args);
-    });
-    $app->helper(cloudinary_image => sub {
-        my($c, $public_id, $args, $image_args) = @_;
-        my $scheme = $c->req->url->scheme || '';
+      return $c->image($self->url_for($public_id, $args), alt => $public_id, %$image_args);
+    }
+  );
+  $app->helper(
+    cloudinary_js_image => sub {
+      my($c, $public_id, $args) = @_;
+      my $scheme = $c->req->url->scheme || '';
 
-        if(not defined $args->{'secure'} and $scheme eq 'https') {
-            $args->{'secure'} = 1;
-        }
+      if(not defined $args->{'secure'} and $scheme eq 'https') {
+        $args->{'secure'} = 1;
+      }
 
-        return $c->image($self->url_for($public_id, $args), alt => $public_id, %$image_args);
-    });
-    $app->helper(cloudinary_js_image => sub {
-        my($c, $public_id, $args) = @_;
-        my $scheme = $c->req->url->scheme || '';
-
-        if(not defined $args->{'secure'} and $scheme eq 'https') {
-            $args->{'secure'} = 1;
-        }
-
-        return $c->image(
-            $self->js_image,
-            'alt' => $public_id,
-            'class' => 'cloudinary-js-image',
-            'data-src' => $public_id,
-            map {
-                my $k = $Cloudinary::LONGER{$_} || $_;
-                ("data-$k" => $args->{$_})
-            } keys %$args
-        );
-    });
+      return $c->image(
+        $self->js_image,
+        'alt'      => $public_id,
+        'class'    => 'cloudinary-js-image',
+        'data-src' => $public_id,
+        map {
+          my $k = $Cloudinary::LONGER{$_} || $_;
+          ("data-$k" => $args->{$_})
+        } keys %$args
+      );
+    }
+  );
 }
 
 =head1 COPYRIGHT & LICENSE
