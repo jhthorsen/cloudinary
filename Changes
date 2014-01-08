@@ -1,6 +1,6 @@
 Revision history for Cloudinary
 
-0.14
+0.14     Wed Jan  8 10:23:45 2014
        * Converting to Mojo::IOLoop->delay API
        * Deprecating on_error and on_success
        * Add .perltidyrc
