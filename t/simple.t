@@ -27,7 +27,7 @@ my $cloudinary
     Mojo::Asset::File->new(path => $0),
     sub {
       my($cloudinary, $res) = @_;
-      is @_, 2, 'two arguments';
+      is @_, 2, 'two arguments for upload';
       isa_ok $cloudinary, 'Cloudinary';
       is_deeply $res, { error => 'upload yikes!' }, 'uploaded';
       Mojo::IOLoop->stop;
@@ -39,7 +39,7 @@ my $cloudinary
     'sample',
     sub {
       my($cloudinary, $res) = @_;
-      is @_, 2, 'two arguments';
+      is @_, 2, 'two arguments destroy';
       isa_ok $cloudinary, 'Cloudinary';
       is_deeply $res, { error => 'destroy yikes!' }, 'destroyed';
       Mojo::IOLoop->stop;

@@ -316,7 +316,7 @@ sub _call_api {
       my($ua, $tx) = @_;
 
       if($cb) {
-        $self->$cb($self, $tx->res->json || { error => $tx->error || 'Unknown error' });
+        $self->$cb($tx->res->json || { error => $tx->error || 'Unknown error' });
       }
       elsif($tx->success) {
         if($args->{on_success}) {
