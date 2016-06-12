@@ -1,8 +1,10 @@
 Revision history for perl distribution Cloudinary
 
-0.15 Not Released
+0.15 2016-06-12T10:24:49-0700
  - Remove delay, on_error and on_success
  - Add support for blocking request
+ - Fix "/" in public_id #1
+   Contributor: Scott Kiehn
 
 0.14 2014-01-08T10:23:45Z
  - Converting to Mojo::IOLoop->delay API

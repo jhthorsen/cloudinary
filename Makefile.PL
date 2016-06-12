@@ -14,7 +14,7 @@ WriteMakefile(
       repository => 'https://github.com/jhthorsen/cloudinary.git',
     },
   },
-  BUILD_REQUIRES => { 'Test::More'  => '0.98' },
-  PREREQ_PM      => { 'Mojolicious' => '6.40' },
-  test           => { TESTS         => (-e 'META.yml' ? 't/*.t' : 't/*.t xt/*.t') },
+  BUILD_REQUIRES => {'Test::More'  => '0.98'},
+  PREREQ_PM      => {'Mojolicious' => '6.40'},
+  test           => {TESTS         => (-e 'META.yml' ? 't/*.t' : 't/*.t xt/*.t')},
 );
