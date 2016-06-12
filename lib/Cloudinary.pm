@@ -2,12 +2,12 @@ package Cloudinary;
 use Mojo::Base -base;
 use File::Basename;
 use Mojo::UserAgent;
-use Mojo::Util qw( sha1_sum url_escape );
+use Mojo::Util qw(sha1_sum url_escape);
 use Scalar::Util 'weaken';
 
 our $VERSION = '0.14';
 our (%SHORTER, %LONGER);
-my @SIGNATURE_KEYS = qw( callback eager format public_id tags timestamp transformation type );
+my @SIGNATURE_KEYS = qw(callback eager format public_id tags timestamp transformation type);
 
 {
   %LONGER = (
@@ -115,37 +115,18 @@ sub _call_api {
   $post->{signature} = $self->_api_sign_request($post);
 
   Scalar::Util::weaken($self);
-  $self->_ua->post(
+  my $tx = $self->_ua->post(
     $url, $headers,
     form => $post,
-    sub {
-      my ($ua, $tx) = @_;
-
-      if ($cb) {
-        $self->$cb($tx->res->json || {error => $tx->error || 'Unknown error'});
-      }
-      elsif ($tx->success) {
-        if ($args->{on_success}) {
-          warn "[Cloudinary] 'on_success' will be deprecated!";
-          $args->{on_success}->($tx->res->json);
-        }
-        elsif ($args->{delay}) {
-          warn "[Cloudinary] 'delay' will be deprecated!";
-          $args->{delay}->($self, $tx->res->json, $tx);
-        }
-      }
-      else {
-        if ($args->{on_error}) {
-          warn "[Cloudinary] 'on_error' will be deprecated!";
-          $args->{on_error}->($tx->res->json);
-        }
-        elsif ($args->{delay}) {
-          warn "[Cloudinary] 'delay' will be deprecated!";
-          $args->{delay}->($self, undef, $tx);
-        }
-      }
-    }
+    $cb ? sub { $self->$cb($_[1]->res->json || {error => $_[1]->error || 'Unknown error'}) } : (),
   );
+
+  return $self if $cb;    # non-blocking
+  my $res = $tx->error;
+  die $res->{message} || 'Unknown error' if $res;
+  $res = $tx->res->json;
+  die $res->{error} if $res->{error};
+  return $res;
 }
 
 sub _api_sign_request {
@@ -203,24 +184,14 @@ This module lets you interface to L<http://cloudinary.com>.
 =head2 Standalone
 
   my $delay = Mojo::IOLoop->delay;
-  my $cloudinary = Cloudinary->new(
-                     cloud_name => '...',
-                     api_key => '...',
-                     api_secret => '...',
-                   );
+  my $cloudinary = Cloudinary->new(cloud_name => "a", api_key => "b", api_secret => "c");
 
   $delay->begin;
-  $cloudinary->upload(
-    {
-      file => {
-        file => $path_to_file,
-      },
-    },
-    sub {
-      my($cloudinary, $res) = @_;
-      # ...
-      $delay->end;
-    },
+  $cloudinary->upload({file => {file => $path_to_file}}, sub {
+    my ($cloudinary, $res) = @_;
+    # ...
+    $delay->end;
+  },
   });
 
   # let's you do multiple upload() in parallel
@@ -293,17 +264,14 @@ Your private CDN url from L<https://cloudinary.com/console>.
 
   $self->upload(
     {
-      file => $binary_str|$url, # required
-      timestamp => $epoch, # time()
-      public_id => $str, # optional
-      format => $str, # optional
-      resource_type => $str, # image or raw. defaults to "image"
-      tags => ['foo', 'bar'], # optional
+      file          => $binary_str | $url,    # required
+      format        => $str,                  # optional
+      public_id     => $str,                  # optional
+      resource_type => $str,                  # image or raw. defaults to "image"
+      tags          => ['foo', 'bar'],        # optional
+      timestamp     => $epoch,                # time()
     },
-    sub {
-      my($cloudinary, $res) = @_;
-      # ...
-    },
+    sub { my ($cloudinary, $res) = @_ }
   );
 
 Will upload a file to L<http://cloudinary.com> using the parameters given
@@ -311,20 +279,18 @@ L</cloud_name>, L</api_key> and L</api_secret>. C<$res> in the callback
 will be the json response from cloudinary:
 
   {
-    url => $str,
+    url        => $str,
     secure_url => $str,
-    public_id => $str,
-    version => $str,
-    width => $int, # only for images
-    height => $int, # only for images
+    public_id  => $str,
+    version    => $str,
+    width      => $int,    # only for images
+    height     => $int,    # only for images
   }
 
 C<$res> on error can be either C<undef> if there was an issue
 connecting/communicating with cloudinary or a an error data structure:
 
-  {
-    error => { message: $str },
-  }
+  {error => {message: $str}}
 
 The C<file> can be:
 
@@ -353,23 +319,18 @@ L<http://cloudinary.com/documentation/upload_images#raw_uploads>.
 
   $self->destroy(
     {
-      public_id => $public_id,
-      resource_type => $str, # image or raw. defaults to "image"
+      public_id     => $public_id,
+      resource_type => $str,         # image or raw. defaults to "image"
     },
-    sub {
-      my($cloudinary, $res) = @_;
-      # ...
-    }
-  });
+    sub { my ($cloudinary, $res) = @_; }
+  );
 
 Will delete an image from cloudinary, identified by C<$public_id>.
 The callback will be called when the image got deleted or if an error occur.
 
 On error, look for:
 
-  {
-    error => { message: $str },
-  }
+  {error => {message: $str}}
 
 See also L<https://cloudinary.com/documentation/upload_images#deleting_images>.
 
@@ -384,11 +345,11 @@ the URL. The return value is a L<Mojo::URL> object.
 Example C<%args>:
 
   {
-    w => 100, # width of image
-    h => 150, # height of image
-    resource_type => $str, # image or raw. defaults to "image"
-    type => $str, # upload, facebook. defaults to "upload"
-    secure => $bool, # use private_cdn or public cdn
+    h             => 150,      # height of image
+    w             => 100,      # width of image
+    resource_type => $str,     # image or raw. defaults to "image"
+    secure        => $bool,    # use private_cdn or public cdn
+    type          => $str,     # upload, facebook. defaults to "upload"
   }
 
 See also L<http://cloudinary.com/documentation/upload_images#accessing_uploaded_images>

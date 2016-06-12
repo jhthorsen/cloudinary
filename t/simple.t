@@ -5,9 +5,10 @@ use Cloudinary;
 use Mojo::Asset::File;
 
 use Mojolicious::Lite;
+my $RES = {error => 'upload yikes!'};
 post '/v1_1/demo/image/upload', sub {
   my $c = shift;
-  $c->render(json => {error => 'upload yikes!'});
+  $c->render(json => $RES);
 };
 post '/v1_1/demo/image/destroy', sub {
   my $c = shift;
@@ -41,5 +42,11 @@ $cloudinary->destroy(
   }
 );
 Mojo::IOLoop->start;
+
+eval { $cloudinary->upload(Mojo::Asset::File->new(path => $0)) };
+like $@, qr{upload yikes}, 'upload failed';
+
+$RES = {success => 1};
+is_deeply $cloudinary->upload(Mojo::Asset::File->new(path => $0)), {success => 1}, 'upload success';
 
 done_testing;

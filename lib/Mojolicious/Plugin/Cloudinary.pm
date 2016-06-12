@@ -2,9 +2,9 @@ package Mojolicious::Plugin::Cloudinary;
 use Mojo::Base -base;
 use File::Basename;
 use Mojo::UserAgent;
-use Mojo::Util qw/ sha1_sum url_escape /;
+use Mojo::Util qw(sha1_sum url_escape);
 use Scalar::Util 'weaken';
-use base qw/ Cloudinary Mojolicious::Plugin /;
+use base qw(Cloudinary Mojolicious::Plugin);
 
 our $VERSION = 0.0402;    # just need something higher than the previous version
 
@@ -93,39 +93,22 @@ your L<Mojolicious> web application. See L</HELPERS> for details.
 
 =head1 SYNOPSIS
 
-  package MyWebApp;
-  use Mojo::Base 'Mojolicious';
+  use Mojolicious::Lite;
 
-  sub startup {
-    my $self = shift;
+  plugin cloudinary => {cloud_name => $str, api_key => $str, api_secret => $str};
 
-    $self->plugin('Mojolicious::Plugin::Cloudinary', {
-      cloud_name => $str,
-      api_key => $str,
-      api_secret => $str,
-    });
-  }
+  post "/upload" => sub {
+    my $c = shift;
 
-  package MyWebApp::SomeController;
-
-  sub upload {
-    my $self = shift;
-
-    $self->render_later;
-    Mojo::IOLoop->delay(
+    $c->delay(
       sub {
-        my($delay) = @_;
-        $self->cloudinary_upload(
-          {
-            file => $self->param('upload_param'),
-          },
-          $delay->begin,
-        );
+        my ($delay) = @_;
+        $c->cloudinary_upload({file => $c->param("upload_param")}, $delay->begin);
       },
       sub {
-        my($delay, $res, $tx) = @_;
-        return $self->render(json => $res) if $res;
-        return $self->render_exception;
+        my ($delay, $res, $tx) = @_;
+        return $c->render(json => $res) if $res;
+        return $c->render_exception;
       },
     );
   }
@@ -170,13 +153,8 @@ L<http://cloudinary.com/blog/cloudinary_s_jquery_library_for_embedding_and_trans
 
 Example usage:
 
-  $c->cloudinary_js_image(1234567890 => {
-    width => 115,
-    height => 115,
-    crop => 'thumb',
-    gravity => 'faces',
-    radius => '20',
-  });
+  $c->cloudinary_js_image(1234567890 =>
+      {width => 115, height => 115, crop => "thumb", gravity => "faces", radius => "20"});
 
 ...will produce:
 
@@ -198,12 +176,8 @@ Note: The "class" and "alt" attributes are fixed for now.
 
 Will register the L</HELPERS> in the L<Mojolicious> application.
 
-=head1 COPYRIGHT & LICENSE
+=head1 SEE ALSO
 
-See L<Cloudinary>.
-
-=head1 AUTHOR
-
-Jan Henning Thorsen - jhthorsen@cpan.org
+L<Cloudinary>.
 
 =cut

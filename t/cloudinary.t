@@ -1,13 +1,20 @@
 use Mojo::Base -strict;
 use Test::More;
+use Test::Mojo;
 use Mojo::Asset::File;
 use Mojo::IOLoop;
 use Cloudinary;
+
+use Mojolicious::Lite;
+post '/v1_1/demo/image/upload'  => sub { shift->render(json => {}) };
+post '/v1_1/demo/image/destroy' => sub { shift->render(json => {}) };
 
 # test data from
 # https://cloudinary.com/documentation/upload_images#request_authentication
 my $cloudinary
   = Cloudinary->new({api_key => '1234567890', api_secret => 'abcd', cloud_name => 'demo'});
+
+$cloudinary->_ua(Test::Mojo->new->ua);
 
 is(
   $cloudinary->_api_sign_request(
@@ -38,19 +45,13 @@ $cloudinary->_ua->once(
       '...with signed request'
     );
     is($tx->req->param('file'), 'http://dumm.y/myimage.png', '...with file as url');
+    $tx->req->url->host($ua->server->nb_url->host)->port($ua->server->nb_url->port);
   }
 );
 
 # returns an id. need to use once(start) above to run tests
 $cloudinary->upload(
-  {
-    file       => 'http://dumm.y/myimage.png',
-    timestamp  => 1315060510,
-    public_id  => 'sample',
-    on_success => sub { },
-    on_error   => sub { },
-  }
-);
+  {file => 'http://dumm.y/myimage.png', timestamp => 1315060510, public_id => 'sample'});
 
 for my $file ({file => $0, filename => 'cloudinary.t'}, Mojo::Asset::File->new(path => $0)) {
   $cloudinary->_ua->once(
@@ -74,19 +75,12 @@ for my $file ({file => $0, filename => 'cloudinary.t'}, Mojo::Asset::File->new(p
           );
         }
       }
+      $tx->req->url->host($ua->server->nb_url->host)->port($ua->server->nb_url->port);
     }
   );
 
   # returns an id. need to use once(start) above to run tests
-  $cloudinary->upload(
-    {
-      file       => $file,
-      timestamp  => 1315060510,
-      public_id  => 'sample',
-      on_success => sub { },
-      on_error   => sub { },
-    }
-  );
+  $cloudinary->upload({file => $file, timestamp => 1315060510, public_id => 'sample'});
 }
 
 $cloudinary->_ua->once(
@@ -101,18 +95,12 @@ $cloudinary->_ua->once(
       '9c549a22def9e2690384973d77b3ff79d7b734d7',
       '...with signed request'
     );    # different key because of "type" is included in POST
+    $tx->req->url->host($ua->server->nb_url->host)->port($ua->server->nb_url->port);
   }
 );
 
 # returns an id. need to use once(start) above to run tests
-$cloudinary->destroy(
-  {
-    timestamp  => 1315060510,
-    public_id  => 'sample',
-    on_success => sub { },
-    on_error   => sub { }
-  }
-);
+$cloudinary->destroy({timestamp => 1315060510, public_id => 'sample'});
 
 is(
   $cloudinary->url_for('sample.gif'),
