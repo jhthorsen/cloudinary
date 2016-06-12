@@ -347,7 +347,7 @@ sub _api_sign_request {
   my @query;
 
   for my $k (@SIGNATURE_KEYS) {
-    push @query, "$k=" . url_escape $args->{$k} if defined $args->{$k};
+    push @query, "$k=" . url_escape( $args->{$k}, '^A-Za-z0-9\-._~\/' ) if defined $args->{$k};
   }
 
   $query[-1] .= $self->api_secret;

@@ -6,7 +6,7 @@ use Mojo::Asset::File;
 use Mojo::IOLoop;
 use Cloudinary;
 
-plan tests => 28;
+plan tests => 29;
 
 # test data from
 # https://cloudinary.com/documentation/upload_images#request_authentication
@@ -17,6 +17,14 @@ my $cloudinary = Cloudinary->new({ api_key => '1234567890', api_secret => 'abcd'
     $cloudinary->_api_sign_request({ timestamp => 1315060510, public_id => 'sample', file => 'foo bar', }),
     'c3470533147774275dd37996cc4d0e68fd03cd4f',
     'signed request'
+  );
+}
+
+{
+  is(
+    $cloudinary->_api_sign_request({ timestamp => 1315060510, public_id => 'sample/sample', file => 'foo bar', }),
+    'ee4e5fc1304c319141776641e32eeb872d8c53d8',
+    'signed request with slash'
   );
 }
 
