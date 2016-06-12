@@ -1,4 +1,190 @@
 package Cloudinary;
+use Mojo::Base -base;
+use File::Basename;
+use Mojo::UserAgent;
+use Mojo::Util qw( sha1_sum url_escape );
+use Scalar::Util 'weaken';
+
+our $VERSION = '0.14';
+our (%SHORTER, %LONGER);
+my @SIGNATURE_KEYS = qw( callback eager format public_id tags timestamp transformation type );
+
+{
+  %LONGER = (
+    a => 'angle',
+    b => 'background',
+    c => 'crop',
+    d => 'default_image',
+    e => 'effect',
+    f => 'fetch_format',
+    g => 'gravity',
+    h => 'height',
+    l => 'overlay',
+    p => 'prefix',
+    q => 'quality',
+    r => 'radius',
+    t => 'named_transformation',
+    w => 'width',
+    x => 'x',
+    y => 'y',
+  );
+  %SHORTER = reverse %LONGER;
+}
+
+has cloud_name  => sub { die 'cloud_name is required in constructor' };
+has api_key     => sub { die 'api_key is required in constructor' };
+has api_secret  => sub { die 'api_secret is required in constructor' };
+has private_cdn => sub { die 'private_cdn is required in constructor' };
+has _api_url    => 'http://api.cloudinary.com/v1_1';
+has _public_cdn => 'http://res.cloudinary.com';
+has _ua         => sub {
+  my $ua = Mojo::UserAgent->new;
+
+  $ua->on(
+    start => sub {
+      my ($ua, $tx) = @_;
+
+      for my $part (@{$tx->req->content->parts}) {
+        my $content_type = $part->headers->content_type || '';
+        $part->headers->remove('Content-Type') if $content_type eq 'text/plain';
+      }
+    }
+  );
+
+  return $ua;
+};
+
+sub upload {
+  my ($self, $args, $cb) = @_;
+
+  # TODO: transformation, eager
+  $args = {file => $args} if ref $args ne 'HASH';
+  $args->{resource_type} ||= 'image';
+  $args->{timestamp} ||= time;
+
+  die "Usage: \$self->upload({ file => ... })" unless defined $args->{file};
+
+  if (ref $args->{tags} eq 'ARRAY') {
+    $args->{tags} = join ',', @{$args->{tags}};
+  }
+  if (UNIVERSAL::isa($args->{file}, 'Mojo::Asset')) {
+    $args->{file}
+      = {file => $args->{file}, filename => $args->{filename} || basename($args->{file}->path)};
+  }
+  elsif (UNIVERSAL::isa($args->{file}, 'Mojo::Upload')) {
+    $args->{file} = {file => $args->{file}->asset, filename => $args->{file}->filename};
+  }
+
+  $self->_call_api(
+    upload => $args,
+    {
+      timestamp => time,
+      (map { ($_, $args->{$_}) } grep { defined $args->{$_} } @SIGNATURE_KEYS),
+      file => $args->{file},
+    },
+    $cb,
+  );
+}
+
+sub destroy {
+  my ($self, $args, $cb) = @_;
+
+  $args = {public_id => $args} unless ref $args eq 'HASH';
+
+  die "Usage: \$self->destroy({ public_id => ... })" unless defined $args->{public_id};
+
+  $args->{resource_type} ||= 'image';
+
+  $self->_call_api(
+    destroy => $args,
+    {
+      public_id => $args->{public_id},
+      timestamp => $args->{timestamp} || time,
+      type      => $args->{type} || 'upload',
+    },
+    $cb,
+  );
+}
+
+sub _call_api {
+  my ($self, $action, $args, $post, $cb) = @_;
+  my $url = join '/', $self->_api_url, $self->cloud_name, $args->{resource_type}, $action;
+  my $headers = {'Content-Type' => 'multipart/form-data'};
+
+  $post->{api_key}   = $self->api_key;
+  $post->{signature} = $self->_api_sign_request($post);
+
+  Scalar::Util::weaken($self);
+  $self->_ua->post(
+    $url, $headers,
+    form => $post,
+    sub {
+      my ($ua, $tx) = @_;
+
+      if ($cb) {
+        $self->$cb($tx->res->json || {error => $tx->error || 'Unknown error'});
+      }
+      elsif ($tx->success) {
+        if ($args->{on_success}) {
+          warn "[Cloudinary] 'on_success' will be deprecated!";
+          $args->{on_success}->($tx->res->json);
+        }
+        elsif ($args->{delay}) {
+          warn "[Cloudinary] 'delay' will be deprecated!";
+          $args->{delay}->($self, $tx->res->json, $tx);
+        }
+      }
+      else {
+        if ($args->{on_error}) {
+          warn "[Cloudinary] 'on_error' will be deprecated!";
+          $args->{on_error}->($tx->res->json);
+        }
+        elsif ($args->{delay}) {
+          warn "[Cloudinary] 'delay' will be deprecated!";
+          $args->{delay}->($self, undef, $tx);
+        }
+      }
+    }
+  );
+}
+
+sub _api_sign_request {
+  my ($self, $args) = @_;
+  my @query;
+
+  for my $k (@SIGNATURE_KEYS) {
+    push @query, "$k=" . url_escape($args->{$k}, '^A-Za-z0-9\-._~\/') if defined $args->{$k};
+  }
+
+  $query[-1] .= $self->api_secret;
+
+  sha1_sum join '&', @query;
+}
+
+sub url_for {
+  my $self      = shift;
+  my $public_id = shift or die 'Usage: $self->url_for($public_id, ...)';
+  my $args      = shift || {};
+  my $format    = $public_id =~ s/\.(\w+)// ? $1 : 'jpg';
+  my $url       = Mojo::URL->new(delete $args->{secure} ? $self->private_cdn : $self->_public_cdn);
+
+  $url->path(
+    join '/',
+    grep {length} $self->cloud_name,
+    $args->{resource_type} || 'image',
+    $args->{type}          || 'upload',
+    join(',',
+      map { ($SHORTER{$_} || $_) . '_' . $args->{$_} }
+      grep { $_ ne 'resource_type' and $_ ne 'type' } sort keys %$args),
+    "$public_id.$format",
+  );
+
+  return $url;
+}
+
+1;
+
+=encoding utf8
 
 =head1 NAME
 
@@ -83,40 +269,6 @@ This module provides alias for the Cloudinary transformations:
   x = x
   y = y
 
-=cut
-
-use Mojo::Base -base;
-use File::Basename;
-use Mojo::UserAgent;
-use Mojo::Util qw( sha1_sum url_escape );
-use Scalar::Util 'weaken';
-
-our $VERSION = '0.14';
-our(%SHORTER, %LONGER);
-my @SIGNATURE_KEYS = qw( callback eager format public_id tags timestamp transformation type );
-
-{
-  %LONGER = (
-    a => 'angle',
-    b => 'background',
-    c => 'crop',
-    d => 'default_image',
-    e => 'effect',
-    f => 'fetch_format',
-    g => 'gravity',
-    h => 'height',
-    l => 'overlay',
-    p => 'prefix',
-    q => 'quality',
-    r => 'radius',
-    t => 'named_transformation',
-    w => 'width',
-    x => 'x',
-    y => 'y',
-  );
-  %SHORTER = reverse %LONGER;
-}
-
 =head1 ATTRIBUTES
 
 =head2 cloud_name
@@ -134,31 +286,6 @@ Your API secret from L<https://cloudinary.com/console>
 =head2 private_cdn
 
 Your private CDN url from L<https://cloudinary.com/console>.
-
-=cut
-
-has cloud_name  => sub { die 'cloud_name is required in constructor' };
-has api_key     => sub { die 'api_key is required in constructor' };
-has api_secret  => sub { die 'api_secret is required in constructor' };
-has private_cdn => sub { die 'private_cdn is required in constructor' };
-has _api_url    => 'http://api.cloudinary.com/v1_1';
-has _public_cdn => 'http://res.cloudinary.com';
-has _ua         => sub {
-  my $ua = Mojo::UserAgent->new;
-
-  $ua->on(
-    start => sub {
-      my($ua, $tx) = @_;
-
-      for my $part (@{ $tx->req->content->parts }) {
-        my $content_type = $part->headers->content_type || '';
-        $part->headers->remove('Content-Type') if $content_type eq 'text/plain';
-      }
-    }
-  );
-
-  return $ua;
-};
 
 =head1 METHODS
 
@@ -222,38 +349,6 @@ actual HTTP POST.
 See also L<https://cloudinary.com/documentation/upload_images> and
 L<http://cloudinary.com/documentation/upload_images#raw_uploads>.
 
-=cut
-
-sub upload {
-  my($self, $args, $cb) = @_;
-
-  # TODO: transformation, eager
-  $args = { file => $args } if ref $args ne 'HASH';
-  $args->{resource_type} ||= 'image';
-  $args->{timestamp} ||= time;
-
-  die "Usage: \$self->upload({ file => ... })" unless defined $args->{file};
-
-  if(ref $args->{tags} eq 'ARRAY') {
-    $args->{tags} = join ',', @{ $args->{tags} };
-  }
-  if(UNIVERSAL::isa($args->{file}, 'Mojo::Asset')) {
-    $args->{file} = { file => $args->{file}, filename => $args->{filename} || basename($args->{file}->path), };
-  }
-  elsif (UNIVERSAL::isa($args->{file}, 'Mojo::Upload')) {
-    $args->{file} = { file => $args->{file}->asset, filename => $args->{file}->filename, };
-  }
-
-  $self->_call_api(
-    upload => $args,
-    {
-      timestamp => time,
-      (map { ($_, $args->{$_}) } grep { defined $args->{$_} } @SIGNATURE_KEYS), file => $args->{file},
-    },
-    $cb,
-  );
-}
-
 =head2 destroy
 
   $self->destroy(
@@ -278,83 +373,6 @@ On error, look for:
 
 See also L<https://cloudinary.com/documentation/upload_images#deleting_images>.
 
-=cut
-
-sub destroy {
-  my($self, $args, $cb) = @_;
-
-  $args = { public_id => $args } unless ref $args eq 'HASH';
-
-  die "Usage: \$self->destroy({ public_id => ... })" unless defined $args->{public_id};
-
-  $args->{resource_type} ||= 'image';
-
-  $self->_call_api(
-    destroy => $args,
-    {
-      public_id => $args->{public_id},
-      timestamp => $args->{timestamp} || time,
-      type => $args->{type} || 'upload',
-    },
-    $cb,
-  );
-}
-
-sub _call_api {
-  my($self, $action, $args, $post, $cb) = @_;
-  my $url = join '/', $self->_api_url, $self->cloud_name, $args->{resource_type}, $action;
-  my $headers = { 'Content-Type' => 'multipart/form-data' };
-
-  $post->{api_key}   = $self->api_key;
-  $post->{signature} = $self->_api_sign_request($post);
-
-  Scalar::Util::weaken($self);
-  $self->_ua->post(
-    $url, $headers,
-    form => $post,
-    sub {
-      my($ua, $tx) = @_;
-
-      if($cb) {
-        $self->$cb($tx->res->json || { error => $tx->error || 'Unknown error' });
-      }
-      elsif($tx->success) {
-        if($args->{on_success}) {
-          warn "[Cloudinary] 'on_success' will be deprecated!";
-          $args->{on_success}->($tx->res->json);
-        }
-        elsif($args->{delay}) {
-          warn "[Cloudinary] 'delay' will be deprecated!";
-          $args->{delay}->($self, $tx->res->json, $tx);
-        }
-      }
-      else {
-        if($args->{on_error}) {
-          warn "[Cloudinary] 'on_error' will be deprecated!";
-          $args->{on_error}->($tx->res->json);
-        }
-        elsif ($args->{delay}) {
-          warn "[Cloudinary] 'delay' will be deprecated!";
-          $args->{delay}->($self, undef, $tx);
-        }
-      }
-    }
-  );
-}
-
-sub _api_sign_request {
-  my($self, $args) = @_;
-  my @query;
-
-  for my $k (@SIGNATURE_KEYS) {
-    push @query, "$k=" . url_escape( $args->{$k}, '^A-Za-z0-9\-._~\/' ) if defined $args->{$k};
-  }
-
-  $query[-1] .= $self->api_secret;
-
-  sha1_sum join '&', @query;
-}
-
 =head2 url_for
 
   $url_obj = $self->url_for("$public_id.$format", \%args);
@@ -376,29 +394,6 @@ Example C<%args>:
 See also L<http://cloudinary.com/documentation/upload_images#accessing_uploaded_images>
 and L<http://cloudinary.com/documentation/image_transformations>.
 
-=cut
-
-sub url_for {
-  my $self      = shift;
-  my $public_id = shift or die 'Usage: $self->url_for($public_id, ...)';
-  my $args      = shift || {};
-  my $format    = $public_id =~ s/\.(\w+)// ? $1 : 'jpg';
-  my $url       = Mojo::URL->new(delete $args->{secure} ? $self->private_cdn : $self->_public_cdn);
-
-  $url->path(
-    join '/',
-    grep {length} $self->cloud_name,
-    $args->{resource_type} || 'image',
-    $args->{type}          || 'upload',
-    join(',',
-      map { ($SHORTER{$_} || $_) . '_' . $args->{$_} }
-      grep { $_ ne 'resource_type' and $_ ne 'type' } sort keys %$args),
-    "$public_id.$format",
-  );
-
-  return $url;
-}
-
 =head1 COPYRIGHT & LICENSE
 
 This library is free software. You can redistribute it and/or
@@ -409,5 +404,3 @@ modify it under the same terms as Perl itself.
 Jan Henning Thorsen - jhthorsen@cpan.org
 
 =cut
-
-1;

@@ -1,4 +1,86 @@
 package Mojolicious::Plugin::Cloudinary;
+use Mojo::Base -base;
+use File::Basename;
+use Mojo::UserAgent;
+use Mojo::Util qw/ sha1_sum url_escape /;
+use Scalar::Util 'weaken';
+use base qw/ Cloudinary Mojolicious::Plugin /;
+
+our $VERSION = 0.0402;    # just need something higher than the previous version
+
+has js_image => '/image/blank.png';
+
+sub register {
+  my ($self, $app, $config) = @_;
+
+  for my $k (keys %{$config || {}}) {
+    $self->$k($config->{$k}) if exists $config->{$k};
+  }
+
+  $self->_ua($app->ua);
+
+  $app->helper(
+    cloudinary_upload => sub {
+      my $c = shift;
+      $self->upload(@_);
+    }
+  );
+  $app->helper(
+    cloudinary_destroy => sub {
+      my $c = shift;
+      $self->destroy(@_);
+    }
+  );
+  $app->helper(
+    cloudinary_url_for => sub {
+      my ($c, $public_id, $args) = @_;
+      my $scheme = $c->req->url->scheme || '';
+
+      if (not defined $args->{secure} and $scheme eq 'https') {
+        $args->{secure} = 1;
+      }
+
+      return $self->url_for($public_id, $args);
+    }
+  );
+  $app->helper(
+    cloudinary_image => sub {
+      my ($c, $public_id, $args, $image_args) = @_;
+      my $scheme = $c->req->url->scheme || '';
+
+      if (not defined $args->{secure} and $scheme eq 'https') {
+        $args->{secure} = 1;
+      }
+
+      return $c->image($self->url_for($public_id, $args), alt => $public_id, %$image_args);
+    }
+  );
+  $app->helper(
+    cloudinary_js_image => sub {
+      my ($c, $public_id, $args) = @_;
+      my $scheme = $c->req->url->scheme || '';
+
+      if (not defined $args->{secure} and $scheme eq 'https') {
+        $args->{secure} = 1;
+      }
+
+      return $c->image(
+        $self->js_image,
+        'alt'      => $public_id,
+        'class'    => 'cloudinary-js-image',
+        'data-src' => $public_id,
+        map {
+          my $k = $Cloudinary::LONGER{$_} || $_;
+          ("data-$k" => $args->{$_})
+        } keys %$args
+      );
+    }
+  );
+}
+
+1;
+
+=encoding utf8
 
 =head1 NAME
 
@@ -48,27 +130,12 @@ your L<Mojolicious> web application. See L</HELPERS> for details.
     );
   }
 
-=cut
-
-use Mojo::Base -base;
-use File::Basename;
-use Mojo::UserAgent;
-use Mojo::Util qw/ sha1_sum url_escape /;
-use Scalar::Util 'weaken';
-use base qw/ Cloudinary Mojolicious::Plugin /;
-
-our $VERSION = 0.0402;    # just need something higher than the previous version
-
 =head1 ATTRIBUTES
 
 =head2 js_image
 
 This string will be used as the image src for images constructed by
 L</cloudinary_js_image>. The default is "/image/blank.png".
-
-=cut
-
-has js_image => '/image/blank.png';
 
 =head1 HELPERS
 
@@ -131,76 +198,6 @@ Note: The "class" and "alt" attributes are fixed for now.
 
 Will register the L</HELPERS> in the L<Mojolicious> application.
 
-=cut
-
-sub register {
-  my($self, $app, $config) = @_;
-
-  for my $k (keys %{ $config || {} }) {
-    $self->$k($config->{$k}) if exists $config->{$k};
-  }
-
-  $self->_ua($app->ua);
-
-  $app->helper(
-    cloudinary_upload => sub {
-      my $c = shift;
-      $self->upload(@_);
-    }
-  );
-  $app->helper(
-    cloudinary_destroy => sub {
-      my $c = shift;
-      $self->destroy(@_);
-    }
-  );
-  $app->helper(
-    cloudinary_url_for => sub {
-      my($c, $public_id, $args) = @_;
-      my $scheme = $c->req->url->scheme || '';
-
-      if(not defined $args->{'secure'} and $scheme eq 'https') {
-        $args->{'secure'} = 1;
-      }
-
-      return $self->url_for($public_id, $args);
-    }
-  );
-  $app->helper(
-    cloudinary_image => sub {
-      my($c, $public_id, $args, $image_args) = @_;
-      my $scheme = $c->req->url->scheme || '';
-
-      if(not defined $args->{'secure'} and $scheme eq 'https') {
-        $args->{'secure'} = 1;
-      }
-
-      return $c->image($self->url_for($public_id, $args), alt => $public_id, %$image_args);
-    }
-  );
-  $app->helper(
-    cloudinary_js_image => sub {
-      my($c, $public_id, $args) = @_;
-      my $scheme = $c->req->url->scheme || '';
-
-      if(not defined $args->{'secure'} and $scheme eq 'https') {
-        $args->{'secure'} = 1;
-      }
-
-      return $c->image(
-        $self->js_image,
-        'alt'      => $public_id,
-        'class'    => 'cloudinary-js-image',
-        'data-src' => $public_id,
-        map {
-          my $k = $Cloudinary::LONGER{$_} || $_;
-          ("data-$k" => $args->{$_})
-        } keys %$args
-      );
-    }
-  );
-}
-
 =head1 COPYRIGHT & LICENSE
 
 See L<Cloudinary>.
@@ -210,5 +207,3 @@ See L<Cloudinary>.
 Jan Henning Thorsen - jhthorsen@cpan.org
 
 =cut
-
-1;
