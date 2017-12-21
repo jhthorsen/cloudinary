@@ -134,7 +134,9 @@ sub _api_sign_request {
   my @query;
 
   for my $k (@SIGNATURE_KEYS) {
-    push @query, "$k=" . url_escape($args->{$k}, '^A-Za-z0-9\-._~/') if defined $args->{$k};
+    next unless defined $args->{$k};
+    my $v = $k eq 'public_id' ? url_escape($args->{$k}, '^A-Za-z0-9\-._~/') : $args->{$k};
+    push @query, "$k=$v";
   }
 
   $query[-1] .= $self->api_secret;
