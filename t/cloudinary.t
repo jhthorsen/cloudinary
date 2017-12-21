@@ -32,6 +32,14 @@ is(
   'signed request with slash'
 );
 
+is(
+  $cloudinary->_api_sign_request(
+    {timestamp => 1315060510, public_id => 'sample', file => 'foo bar', tags => 'foo,bar'}
+  ),
+  'a70b09e115c84bc955b6870bb6d7591a0145b1c5',
+  'signed request - params should not be URL-escaped when creating signature'
+);
+
 $cloudinary->_ua->once(
   start => sub {
     my ($ua, $tx) = @_;
