@@ -1,5 +1,8 @@
 Revision history for perl distribution Cloudinary
 
+0.16 2017-12-25T10:32:59+0100
+ - Fix URL escaping in signature string #5
+
 0.15 2016-06-12T10:24:49-0700
  - Remove delay, on_error and on_success
  - Add support for blocking request
